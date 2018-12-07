@@ -7,18 +7,18 @@ import (
 
 type Dma struct {
 	isProcessing bool
-	ramAddr uint
-	ram bus.Ram
-	ppu ppu.Ppu
-	addr uint
-	cycle uint
+	ramAddr      uint
+	ram          *bus.Ram
+	ppu          *ppu.Ppu
+	addr         uint
+	cycle        uint
 }
 
-func NewDma(ram bus.Ram, ppu ppu.Ppu) *Dma {
+func NewDma(ram *bus.Ram, ppu *ppu.Ppu) *Dma {
 	return new(Dma).init(ram, ppu)
 }
 
-func (D *Dma) init(ram bus.Ram, ppu ppu.Ppu) *Dma  {
+func (D *Dma) init(ram *bus.Ram, ppu *ppu.Ppu) *Dma {
 	dma := new(Dma)
 	dma.isProcessing = false
 	dma.ramAddr = 0x0000
@@ -34,7 +34,7 @@ func (D *Dma) IsDmaProcessing() bool {
 }
 
 func (D *Dma) Run() {
-	
+
 }
 
 func (D *Dma) Write(data byte) {

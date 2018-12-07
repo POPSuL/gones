@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/popsul/gones/bus"
 	"github.com/popsul/gones/cpu"
+	"github.com/popsul/gones/interrupts"
 	"github.com/popsul/gones/ppu"
 	"github.com/popsul/gones/reader"
 	"os"
@@ -10,16 +11,23 @@ import (
 
 type Nes struct {
 	ppu *ppu.Ppu
-	ram *bus.Ram
+
+	cpu        *cpu.Cpu
+	dma        *cpu.Dma
+	interrupts *interrupts.Interrupts
+
+	cpuBus       *cpu.CpuBus
+	ram          *bus.Ram
+	ppuBus       *bus.PpuBus
 	characterMem *bus.Ram
-	programPom *bus.Rom
-	dma *cpu.Dma
-	interrupts *cpu.Interrupts
+	programPom   *bus.Rom
+	keypad       *bus.Keypad
 }
 
-func NewNes(rom reader.NesRom) *Nes {
+func NewNes(rom *reader.NesRom) *Nes {
 	nes := new(Nes)
-	// todo: keyboard
+
+	nes.keypad = bus.NewKeypad()
 	nes.ram = bus.NewRam(2048)
 
 	nes.characterMem = bus.NewRam(0x4000)
@@ -27,15 +35,15 @@ func NewNes(rom reader.NesRom) *Nes {
 
 	nes.programPom = bus.NewRom(rom.Program)
 
-	// todo: ppuBus
-	nes.interrupts = cpu.NewInterrupts()
+	nes.ppuBus = bus.NewPpuBus(nes.characterMem)
+	nes.interrupts = interrupts.NewInterrupts()
 
-	// todo: Допилить
-	nes.ppu = ppu.NewPpu()
-	nes.dma = cpu.NewDma(*nes.ram, *nes.ppu)
+	nes.ppu = ppu.NewPpu(nes.ppuBus, nes.interrupts, rom.HorizontalMirror)
+	nes.dma = cpu.NewDma(nes.ram, nes.ppu)
 
-	// todo: cpuBus
-	// todo: CPU
+	nes.cpuBus = cpu.NewCpuBus(nes.ram, nes.programPom, nes.ppu, nes.keypad, nes.dma)
+	nes.cpu = cpu.NewCpu(nes.cpuBus, nes.interrupts)
+	nes.cpu.Reset()
 
 	return nes
 }
@@ -44,5 +52,6 @@ func main() {
 	var nesFile = os.Args[1]
 	println("input file: ", nesFile)
 
-	_ = reader.ReadRom(nesFile)
+	rom := reader.ReadRom(nesFile)
+	_ = NewNes(rom)
 }
