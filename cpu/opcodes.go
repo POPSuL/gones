@@ -1,10 +1,12 @@
 package cpu
 
+type Addressing int
+
 type OpCode struct {
-	FullName string
-	BaseName string
-	Addressing uint
-	Cycle uint
+	FullName   string
+	BaseName   string
+	Addressing Addressing
+	Cycle      uint
 }
 
 var Cycles = [...]uint{
@@ -26,7 +28,7 @@ var Cycles = [...]uint{
 	2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
 }
 
-var OpCodes = map[int]OpCode{
+var OpCodes = map[uint]OpCode{
 	0xA9: {"LDA_IMM", "LDA", Immediate, Cycles[0xA9]},
 	0xA5: {"LDA_ZERO", "LDA", ZeroPage, Cycles[0xA5]},
 	0xAD: {"LDA_ABS", "LDA", Absolute, Cycles[0xAD]},
@@ -64,7 +66,7 @@ var OpCodes = map[int]OpCode{
 	0xA8: {"TAY", "TAY", Implied, Cycles[0xA8]},
 	0xAA: {"TAX", "TAX", Implied, Cycles[0xAA]},
 	0xBA: {"TSX", "TSX", Implied, Cycles[0xBA]},
-	0x8: {"PHP", "PHP", Implied, Cycles[0x08]},
+	0x8:  {"PHP", "PHP", Implied, Cycles[0x08]},
 	0x28: {"PLP", "PLP", Implied, Cycles[0x28]},
 	0x48: {"PHA", "PHA", Implied, Cycles[0x48]},
 	0x68: {"PLA", "PLA", Implied, Cycles[0x68]},
@@ -114,19 +116,19 @@ var OpCodes = map[int]OpCode{
 	0x59: {"EOR_ABSY", "EOR", AbsoluteY, Cycles[0x59]},
 	0x41: {"EOR_INDX", "EOR", PreIndexedIndirect, Cycles[0x41]},
 	0x51: {"EOR_INDY", "EOR", PostIndexedIndirect, Cycles[0x51]},
-	0x9: {"ORA_IMM", "ORA", Immediate, Cycles[0x09]},
-	0x5: {"ORA_ZERO", "ORA", ZeroPage, Cycles[0x05]},
-	0xD: {"ORA_ABS", "ORA", Absolute, Cycles[0x0D]},
+	0x9:  {"ORA_IMM", "ORA", Immediate, Cycles[0x09]},
+	0x5:  {"ORA_ZERO", "ORA", ZeroPage, Cycles[0x05]},
+	0xD:  {"ORA_ABS", "ORA", Absolute, Cycles[0x0D]},
 	0x15: {"ORA_ZEROX", "ORA", ZeroPageX, Cycles[0x15]},
 	0x1D: {"ORA_ABSX", "ORA", AbsoluteX, Cycles[0x1D]},
 	0x19: {"ORA_ABSY", "ORA", AbsoluteY, Cycles[0x19]},
-	0x1: {"ORA_INDX", "ORA", PreIndexedIndirect, Cycles[0x01]},
+	0x1:  {"ORA_INDX", "ORA", PreIndexedIndirect, Cycles[0x01]},
 	0x11: {"ORA_INDY", "ORA", PostIndexedIndirect, Cycles[0x11]},
 	0x24: {"BIT_ZERO", "BIT", ZeroPage, Cycles[0x24]},
 	0x2C: {"BIT_ABS", "BIT", Absolute, Cycles[0x2C]},
-	0xA: {"ASL", "ASL", Accumulator, Cycles[0x0A]},
-	0x6: {"ASL_ZERO", "ASL", ZeroPage, Cycles[0x06]},
-	0xE: {"ASL_ABS", "ASL", Absolute, Cycles[0x0E]},
+	0xA:  {"ASL", "ASL", Accumulator, Cycles[0x0A]},
+	0x6:  {"ASL_ZERO", "ASL", ZeroPage, Cycles[0x06]},
+	0xE:  {"ASL_ABS", "ASL", Absolute, Cycles[0x0E]},
 	0x16: {"ASL_ZEROX", "ASL", ZeroPageX, Cycles[0x16]},
 	0x1E: {"ASL_ABSX", "ASL", AbsoluteX, Cycles[0x1E]},
 	0x4A: {"LSR", "LSR", Accumulator, Cycles[0x4A]},
@@ -162,7 +164,7 @@ var OpCodes = map[int]OpCode{
 	0x38: {"SEC", "SEC", Implied, Cycles[0x38]},
 	0x78: {"SEI", "SEI", Implied, Cycles[0x78]},
 	0xEA: {"NOP", "NOP", Implied, Cycles[0xEA]},
-	0x0: {"BRK", "BRK", Implied, Cycles[0x00]},
+	0x0:  {"BRK", "BRK", Implied, Cycles[0x00]},
 	0x20: {"JSR_ABS", "JSR", Absolute, Cycles[0x20]},
 	0x4C: {"JMP_ABS", "JMP", Absolute, Cycles[0x4C]},
 	0x6C: {"JMP_INDABS", "JMP", IndirectAbsolute, Cycles[0x6C]},

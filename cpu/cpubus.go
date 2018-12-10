@@ -1,7 +1,6 @@
 package cpu
 
 import (
-	"fmt"
 	"github.com/popsul/gones/bus"
 	"github.com/popsul/gones/ppu"
 )
@@ -25,7 +24,7 @@ func NewCpuBus(ram *bus.Ram, prgRom *bus.Rom, ppu *ppu.Ppu, keypad *bus.Keypad, 
 }
 
 func (CB *CpuBus) ReadByCpu(addr uint) byte {
-	fmt.Printf("ReadByCpu(%d)\n", addr)
+	//fmt.Printf("ReadByCpu(%d)\n", addr)
 	if addr < 0x0800 {
 		return CB.ram.Read(addr)
 	} else if addr < 0x2000 {
@@ -46,7 +45,7 @@ func (CB *CpuBus) ReadByCpu(addr uint) byte {
 		if CB.programRom.Size() <= 0x4000 {
 			return CB.programRom.Read(addr - 0xC000)
 		}
-		fmt.Printf("ReadByCpu(%d): %d\n", addr, CB.programRom.Read(addr-0x8000))
+		//fmt.Printf("ReadByCpu(%d): %d\n", addr, CB.programRom.Read(addr-0x8000))
 		return CB.programRom.Read(addr - 0x8000)
 	} else if addr >= 0x8000 {
 		// ROM

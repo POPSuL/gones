@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/popsul/gones/bus"
 	"github.com/popsul/gones/cpu"
 	"github.com/popsul/gones/interrupts"
@@ -48,10 +49,31 @@ func NewNes(rom *reader.NesRom) *Nes {
 	return nes
 }
 
+func (N *Nes) Frame() {
+	for true {
+		var cycle uint = 0
+		if N.dma.IsDmaProcessing() {
+			N.dma.Run()
+			cycle = 514
+		}
+		cycle += N.cpu.Run()
+		renderingData := N.ppu.Run(cycle * 3)
+		if renderingData != nil {
+			fmt.Printf("RenderingData is not nil!\n")
+			//	N.cpu.bus->keypad->fetch();
+			//	N.renderer->render($renderingData);
+			break
+		}
+	}
+}
+
 func main() {
 	var nesFile = os.Args[1]
 	println("input file: ", nesFile)
 
 	rom := reader.ReadRom(nesFile)
-	_ = NewNes(rom)
+	nes := NewNes(rom)
+	//for true {
+	nes.Frame()
+	//}
 }

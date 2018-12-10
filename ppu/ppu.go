@@ -99,6 +99,12 @@ type Ppu struct {
 	isHorizontalMirror bool
 }
 
+type RenderingData struct {
+	palette    []byte
+	background []Tile
+	sprites    []SpriteWithAttribute
+}
+
 func NewPpu(ppuBus *bus.PpuBus, interrupts *interrupts.Interrupts, isHorizontalMirror bool) *Ppu {
 	ppu := new(Ppu)
 	ppu.registers = make([]byte, 7)
@@ -122,6 +128,14 @@ func NewPpu(ppuBus *bus.PpuBus, interrupts *interrupts.Interrupts, isHorizontalM
 	ppu.palette = *NewPalette()
 
 	return ppu
+}
+
+func NewRenderingData(palette []byte, background []Tile, sprites []SpriteWithAttribute) *RenderingData {
+	return &RenderingData{
+		palette,
+		background,
+		sprites,
+	}
 }
 
 func (P *Ppu) ReadCharacterRAM(addr uint) byte {
@@ -168,7 +182,7 @@ func (P *Ppu) Read(addr uint) byte {
 		P.isHorizontalScroll = true
 		data := P.registers[0x02]
 		P.clearVblank()
-		// $this->clearSpriteHit();
+		// P.clearSpriteHit();
 		return byte(data)
 	}
 	// Write OAM data here. Writes will increment OAMADDR after the write
@@ -332,4 +346,57 @@ func (P *Ppu) isVblank() bool {
 
 func (P *Ppu) clearVblank() {
 	P.registers[0x02] &= 0x7F
+}
+
+func (P *Ppu) buildSprites() {
+
+}
+
+func (P *Ppu) buildBackground() {
+
+}
+
+func (P *Ppu) Run(cycle uint) *RenderingData {
+	P.cycle += cycle
+	if P.line == 0 {
+		P.background = []Tile{}
+		P.buildSprites()
+	}
+
+	if P.cycle >= 341 {
+		P.cycle -= 341
+		P.line++
+		if P.hasSpriteHit() {
+			P.setSpriteHit()
+		}
+		if P.line <= 240 && P.line%8 == 0 && P.scrollY <= 240 {
+			P.buildBackground()
+		}
+		if P.line == 241 {
+			P.setVblank()
+			if P.hasVblankIrqEnabled() {
+				P.interrupts.AssertNmi()
+			}
+		}
+		if P.line == 262 {
+			P.clearVblank()
+			P.clearSpriteHit()
+			P.line = 0
+			P.interrupts.ReleaseNmi()
+			var bg []Tile = nil
+			var sprites []SpriteWithAttribute = nil
+			if P.isBackgroundEnable() {
+				bg = P.background
+			}
+			if P.isSpriteEnable() {
+				sprites = P.sprites
+			}
+			return NewRenderingData(
+				P.getPalette(),
+				bg,
+				sprites,
+			)
+		}
+	}
+	return nil
 }
