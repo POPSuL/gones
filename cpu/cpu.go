@@ -211,7 +211,7 @@ func (C *Cpu) getAddrOrDataWithAdditionalCycle(mode Addressing) AddrOrDataAndAdd
 func (C *Cpu) execOpCode(op uint) {
 	opInfo := OpCodes[op]
 	data := C.getAddrOrDataWithAdditionalCycle(opInfo.Addressing)
-	fmt.Printf("OP %02x (%s) ADDR: %04x (%02x)\n", op, opInfo.BaseName, data.addrOrData, opInfo.Addressing)
+	fmt.Printf("OP 0x%02x (%s) ADDR: 0x%04x (0x%02x)\n", op, opInfo.BaseName, data.addrOrData, opInfo.Addressing)
 }
 
 func (C *Cpu) Run() uint {
