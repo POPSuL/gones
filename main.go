@@ -23,6 +23,8 @@ type Nes struct {
 	characterMem *bus.Ram
 	programPom   *bus.Rom
 	keypad       *bus.Keypad
+
+	renderer *ppu.Renderer
 }
 
 func NewNes(rom *reader.NesRom) *Nes {
@@ -46,6 +48,8 @@ func NewNes(rom *reader.NesRom) *Nes {
 	nes.cpu = cpu.NewCpu(nes.cpuBus, nes.interrupts)
 	nes.cpu.Reset()
 
+	nes.renderer = ppu.NewRenderer()
+
 	return nes
 }
 
@@ -61,7 +65,7 @@ func (N *Nes) Frame() {
 		if renderingData != nil {
 			fmt.Printf("RenderingData is not nil!\n")
 			//	N.cpu.bus->keypad->fetch();
-			//	N.renderer->render($renderingData);
+			N.renderer.Render(renderingData)
 			break
 		}
 	}

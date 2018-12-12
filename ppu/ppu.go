@@ -2,6 +2,7 @@ package ppu
 
 import (
 	"github.com/popsul/gones/bus"
+	. "github.com/popsul/gones/common"
 	"github.com/popsul/gones/interrupts"
 )
 
@@ -107,7 +108,7 @@ type RenderingData struct {
 
 func NewPpu(ppuBus *bus.PpuBus, interrupts *interrupts.Interrupts, isHorizontalMirror bool) *Ppu {
 	ppu := new(Ppu)
-	ppu.registers = make([]byte, 7)
+	ppu.registers = make([]byte, 8)
 	ppu.cycle = 0
 	ppu.line = 0
 	ppu.isValidVramAddr = false
@@ -119,7 +120,7 @@ func NewPpu(ppuBus *bus.PpuBus, interrupts *interrupts.Interrupts, isHorizontalM
 	ppu.spriteRam = *bus.NewRam(0x100)
 	ppu.spriteRamAddr = 0
 	ppu.background = []Tile{}
-	ppu.sprites = []SpriteWithAttribute{}
+	ppu.sprites = make([]SpriteWithAttribute, SPRITES_NUMBER)
 	ppu.bus = ppuBus
 	ppu.interrupts = interrupts
 	ppu.isHorizontalMirror = isHorizontalMirror
@@ -348,12 +349,98 @@ func (P *Ppu) clearVblank() {
 	P.registers[0x02] &= 0x7F
 }
 
-func (P *Ppu) buildSprites() {
+func (P *Ppu) getBlockId(tileX uint, tileY uint) uint {
+	return ^^((tileX % 4) / 2) + (^^((tileY % 4) / 2))*2
+}
 
+func (P *Ppu) getAttribute(tileX uint, tileY uint, offset uint) uint {
+	addr := ^^(tileX / 4) + (^^(tileY / 4) * 8) + 0x03C0 + offset
+	return uint(P.vram.Read(P.mirrorDownSpriteAddr(addr)))
+}
+
+func (P *Ppu) getSpriteId(tileX uint, tileY uint, offset uint) uint {
+	tileNumber := tileY*32 + tileX
+	spriteAddr := P.mirrorDownSpriteAddr(tileNumber + offset)
+	return uint(P.vram.Read(spriteAddr))
+}
+
+func (P *Ppu) mirrorDownSpriteAddr(addr uint) uint {
+	if !P.isHorizontalMirror {
+		return addr
+	}
+
+	if addr >= 0x0400 && addr < 0x0800 || addr >= 0x0C00 {
+		return addr - 0x400
+	}
+	return addr
+}
+
+func (P *Ppu) buildSprites() {
+	offset := I2ix(uint(P.registers[0])&0x08, 0x1000, 0x0000)
+	for i := uint(0); i < SPRITES_NUMBER; i = i + 4 {
+		// INFO: Offset sprite Y position, because First and last 8line is not rendered.
+		y := uint(P.spriteRam.Read(i) - 8)
+		// TODO: WTF
+		//if (y < 0) {
+		//	return
+		//}
+		spriteId := uint(P.spriteRam.Read(i + 1))
+		attr := uint(P.spriteRam.Read(i + 2))
+		x := uint(P.spriteRam.Read(i + 3))
+		sprite := P.buildSprite(spriteId, offset)
+		P.sprites[i/4] = *NewSpriteWithAttribute(sprite, x, y, attr, spriteId)
+	}
+}
+
+func (P *Ppu) buildSprite(spriteId uint, offset uint) [][]uint {
+	sprite := make([][]uint, 8)
+	for index := range sprite {
+		sprite[index] = make([]uint, 8)
+	}
+
+	for i := uint(0); i < 16; i++ {
+		for j := uint(0); j < 8; j++ {
+			addr := spriteId*16 + i + offset
+			ram := P.ReadCharacterRAM(addr)
+			if ram&(0x80>>j) > 0 {
+				sprite[i%8][j] += 0x01 << ^^(i / 8)
+			}
+		}
+	}
+	return sprite
+}
+
+func (P *Ppu) buildTile(tileX uint, tileY uint, offset uint) Tile {
+	// INFO see. http://hp.vector.co.jp/authors/VA042397/nes/ppu.html
+	blockId := P.getBlockId(tileX, tileY)
+	spriteId := P.getSpriteId(tileX, tileY, offset)
+	attr := P.getAttribute(tileX, tileY, offset)
+	paletteId := (attr >> (blockId * 2)) & 0x03
+	sprite := P.buildSprite(spriteId, P.backgroundTableOffset())
+	return *NewTile(
+		sprite,
+		paletteId,
+		P.scrollX,
+		P.scrollY,
+	)
 }
 
 func (P *Ppu) buildBackground() {
-
+	// INFO: Horizontal offsets range from 0 to 255. "Normal" vertical offsets range from 0 to 239,
+	// while values of 240 to 255 are treated as -16 through -1 in a way, but tile data is incorrectly
+	// fetched from the attribute table.
+	clampedTileY := P.tileY() % 30
+	tableIdOffset := I2ix(^^(P.tileY()/30)%2, 2, 0)
+	// background of a line.
+	// Build viewport + 1 tile for background scroll.
+	for x := uint(0); x < 32+1; x++ {
+		tileX := x + P.scrollTileX()
+		clampedTileX := tileX % 32
+		nameTableId := (^^(tileX / 32) % 2) + tableIdOffset
+		offsetAddrByNameTable := nameTableId * 0x400
+		tile := P.buildTile(clampedTileX, clampedTileY, offsetAddrByNameTable)
+		P.background = append(P.background, tile)
+	}
 }
 
 func (P *Ppu) Run(cycle uint) *RenderingData {

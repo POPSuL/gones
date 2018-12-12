@@ -3,37 +3,13 @@ package cpu
 import (
 	"errors"
 	"fmt"
+	. "github.com/popsul/gones/common"
 	"github.com/popsul/gones/interrupts"
 )
 
 const cpuClock = 1789772.5
 
 var instrNumber = 0
-
-func b2i(b bool) uint {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-func b2ix(b bool, true uint, false uint) uint {
-	if b {
-		return true
-	}
-	return false
-}
-
-func b2bx(b bool, true byte, false byte) byte {
-	if b {
-		return true
-	}
-	return false
-}
-
-func i2b(i uint) bool {
-	return i > 0
-}
 
 type Cpu struct {
 	bus         *CpuBus
@@ -106,27 +82,27 @@ func (C *Cpu) Branch(addr uint) {
 }
 
 func (C *Cpu) pushStatus() {
-	status := byte(b2i(C.registers.P.Negative)<<7 |
-		b2i(C.registers.P.Overflow)<<6 |
-		b2i(C.registers.P.Reserved)<<5 |
-		b2i(C.registers.P.BreakMode)<<4 |
-		b2i(C.registers.P.DecimalMode)<<3 |
-		b2i(C.registers.P.Interrupt)<<2 |
-		b2i(C.registers.P.Zero)<<1 |
-		b2i(C.registers.P.Carry))
+	status := byte(B2i(C.registers.P.Negative)<<7 |
+		B2i(C.registers.P.Overflow)<<6 |
+		B2i(C.registers.P.Reserved)<<5 |
+		B2i(C.registers.P.BreakMode)<<4 |
+		B2i(C.registers.P.DecimalMode)<<3 |
+		B2i(C.registers.P.Interrupt)<<2 |
+		B2i(C.registers.P.Zero)<<1 |
+		B2i(C.registers.P.Carry))
 	C.Push(status)
 }
 
 func (C *Cpu) popStatus() {
 	status := C.Pop()
-	C.registers.P.Negative = i2b(status & 0x80)
-	C.registers.P.Overflow = i2b(status & 0x40)
-	C.registers.P.Reserved = i2b(status & 0x20)
-	C.registers.P.BreakMode = i2b(status & 0x10)
-	C.registers.P.DecimalMode = i2b(status & 0x08)
-	C.registers.P.Interrupt = i2b(status & 0x04)
-	C.registers.P.Zero = i2b(status & 0x02)
-	C.registers.P.Carry = i2b(status & 0x01)
+	C.registers.P.Negative = I2b(status & 0x80)
+	C.registers.P.Overflow = I2b(status & 0x40)
+	C.registers.P.Reserved = I2b(status & 0x20)
+	C.registers.P.BreakMode = I2b(status & 0x10)
+	C.registers.P.DecimalMode = I2b(status & 0x08)
+	C.registers.P.Interrupt = I2b(status & 0x04)
+	C.registers.P.Zero = I2b(status & 0x02)
+	C.registers.P.Carry = I2b(status & 0x01)
 }
 
 func (C *Cpu) PopPC() {
@@ -173,10 +149,9 @@ func (C *Cpu) getAddrOrDataWithAdditionalCycle(mode Addressing) AddrOrDataAndAdd
 		} else {
 			addr = baseAddr + C.registers.PC - 256
 		}
-		//fmt.Printf("REL: %d\n", b2i((addr & 0xff00) != (C.registers.PC & 0xFF00)))
 		return newAddrOrDataAndAdditionalCycle(
 			addr,
-			b2i((addr&0xff00) != (C.registers.PC&0xFF00)),
+			B2i((addr&0xff00) != (C.registers.PC&0xFF00)),
 		)
 	case ZeroPage:
 		return newAddrOrDataAndAdditionalCycle(C.Fetch(C.registers.PC, false), 0)
@@ -193,18 +168,18 @@ func (C *Cpu) getAddrOrDataWithAdditionalCycle(mode Addressing) AddrOrDataAndAdd
 		return newAddrOrDataAndAdditionalCycle(C.Fetch(C.registers.PC, true), 0)
 	case AbsoluteX:
 		addr := C.Fetch(C.registers.PC, true)
-		additionalCycle := b2i((addr & 0xFF00) != ((addr + C.registers.X) & 0xFF00))
+		additionalCycle := B2i((addr & 0xFF00) != ((addr + C.registers.X) & 0xFF00))
 		return newAddrOrDataAndAdditionalCycle((addr+C.registers.X)&0xFFFF, additionalCycle)
 	case AbsoluteY:
 		addr := C.Fetch(C.registers.PC, true)
-		additionalCycle := b2i((addr & 0xFF00) != ((addr + C.registers.Y) & 0xFF00))
+		additionalCycle := B2i((addr & 0xFF00) != ((addr + C.registers.Y) & 0xFF00))
 		return newAddrOrDataAndAdditionalCycle((addr+C.registers.Y)&0xFFFF, additionalCycle)
 	case PreIndexedIndirect:
 		baseAddr := (C.Fetch(C.registers.PC, false) + C.registers.X) & 0xFF
 		addr := C.Read(baseAddr, false) + (C.Read((baseAddr+1)&0xFF, false) << 8)
 		return newAddrOrDataAndAdditionalCycle(
 			addr&0xFFFF,
-			b2i((addr&0xFF00) != (baseAddr&0xFF00)),
+			B2i((addr&0xFF00) != (baseAddr&0xFF00)),
 		)
 	case PostIndexedIndirect:
 		addrOrData := C.Fetch(C.registers.PC, false)
@@ -212,7 +187,7 @@ func (C *Cpu) getAddrOrDataWithAdditionalCycle(mode Addressing) AddrOrDataAndAdd
 		addr := baseAddr + C.registers.Y
 		return newAddrOrDataAndAdditionalCycle(
 			addr&0xFFFF,
-			b2i((addr&0xFF00) != (baseAddr&0xFF00)),
+			B2i((addr&0xFF00) != (baseAddr&0xFF00)),
 		)
 	case IndirectAbsolute:
 		addrOrData := C.Fetch(C.registers.PC, true)
@@ -228,14 +203,14 @@ func (C *Cpu) getAddrOrDataWithAdditionalCycle(mode Addressing) AddrOrDataAndAdd
 func (C *Cpu) dumpRegisters() {
 	fmt.Printf(
 		"0b%d%d%d%d%d%d%d%d\t%d\t%d\t%d\t%d\t%d\n",
-		b2i(C.registers.P.DecimalMode),
-		b2i(C.registers.P.Zero),
-		b2i(C.registers.P.Negative),
-		b2i(C.registers.P.Interrupt),
-		b2i(C.registers.P.BreakMode),
-		b2i(C.registers.P.Carry),
-		b2i(C.registers.P.Overflow),
-		b2i(C.registers.P.Reserved),
+		B2i(C.registers.P.DecimalMode),
+		B2i(C.registers.P.Zero),
+		B2i(C.registers.P.Negative),
+		B2i(C.registers.P.Interrupt),
+		B2i(C.registers.P.BreakMode),
+		B2i(C.registers.P.Carry),
+		B2i(C.registers.P.Overflow),
+		B2i(C.registers.P.Reserved),
 		C.registers.SP,
 		C.registers.PC,
 		C.registers.A,
@@ -249,35 +224,35 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 	addrOrData := dataInfo.addrOrData
 	mode := opInfo.Addressing
 	instrNumber++
-	fmt.Printf(
-		"OP %d (%s) ADDR: 0x%04x (%s)\n",
-		instrNumber,
-		opInfo.BaseName,
-		dataInfo.addrOrData,
-		AddressingName[opInfo.Addressing],
-	)
+	//fmt.Printf(
+	//	"OP %d (%s) ADDR: 0x%04x (%s)\n",
+	//	instrNumber,
+	//	opInfo.BaseName,
+	//	dataInfo.addrOrData,
+	//	AddressingName[opInfo.Addressing],
+	//)
 
-	C.dumpRegisters()
+	//C.dumpRegisters()
 
 	C.hasBranched = false
 	switch opInfo.BaseName {
 	case "LDA":
-		C.registers.A = b2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		C.registers.P.Negative = i2b(C.registers.A & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.A)
+		C.registers.A = B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		C.registers.P.Negative = I2b(C.registers.A & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.A)
 		break
 	case "LDX":
-		C.registers.X = b2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		C.registers.P.Negative = i2b(C.registers.X & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.X)
+		C.registers.X = B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		C.registers.P.Negative = I2b(C.registers.X & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.X)
 		break
 	case "LDY":
-		C.registers.Y = b2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		C.registers.P.Negative = i2b(C.registers.Y & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.Y)
+		C.registers.Y = B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		C.registers.P.Negative = I2b(C.registers.Y & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.Y)
 		break
 	case "STA":
-		fmt.Printf("STA %d %d\n", addrOrData, C.registers.A)
+		//fmt.Printf("STA %d %d\n", addrOrData, C.registers.A)
 		C.Write(addrOrData, byte(C.registers.A))
 		break
 	case "STX":
@@ -288,195 +263,195 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 		break
 	case "TAX":
 		C.registers.X = C.registers.A
-		C.registers.P.Negative = i2b(C.registers.X & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.X)
+		C.registers.P.Negative = I2b(C.registers.X & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.X)
 		break
 	case "TAY":
 		C.registers.Y = C.registers.A
-		C.registers.P.Negative = i2b(C.registers.Y & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.Y)
+		C.registers.P.Negative = I2b(C.registers.Y & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.Y)
 		break
 	case "TSX":
 		C.registers.X = C.registers.SP & 0xFF
-		C.registers.P.Negative = i2b(C.registers.X & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.X)
+		C.registers.P.Negative = I2b(C.registers.X & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.X)
 		break
 	case "TXA":
 		C.registers.A = C.registers.X
-		C.registers.P.Negative = i2b(C.registers.A & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.A)
+		C.registers.P.Negative = I2b(C.registers.A & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.A)
 		break
 	case "TXS":
 		C.registers.SP = C.registers.X + 0x0100
 		break
 	case "TYA":
 		C.registers.A = C.registers.Y
-		C.registers.P.Negative = i2b(C.registers.A & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.A)
+		C.registers.P.Negative = I2b(C.registers.A & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.A)
 		break
 	case "ADC":
-		data := b2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		operated := data + C.registers.A + b2i(C.registers.P.Carry)
+		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		operated := data + C.registers.A + B2i(C.registers.P.Carry)
 		overflow := !(((C.registers.A ^ data) & 0x80) != 0) && ((C.registers.A^operated)&0x80) != 0
 		C.registers.P.Overflow = overflow
 		C.registers.P.Carry = operated > 0xFF
-		C.registers.P.Negative = i2b(operated & 0x80)
-		C.registers.P.Zero = !i2b(operated & 0xFF)
+		C.registers.P.Negative = I2b(operated & 0x80)
+		C.registers.P.Zero = !I2b(operated & 0xFF)
 		C.registers.A = operated & 0xFF
 		break
 	case "AND":
-		data := b2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
 		operated := data & C.registers.A
-		C.registers.P.Negative = i2b(operated & 0x80)
-		C.registers.P.Zero = !i2b(operated)
+		C.registers.P.Negative = I2b(operated & 0x80)
+		C.registers.P.Zero = !I2b(operated)
 		C.registers.A = operated & 0xFF
 		break
 	case "ASL":
 		if mode == Accumulator {
 			acc := C.registers.A
-			C.registers.P.Carry = !!i2b(acc & 0x80)
+			C.registers.P.Carry = !!I2b(acc & 0x80)
 			C.registers.A = (acc << 1) & 0xFF
-			C.registers.P.Zero = !i2b(C.registers.A)
-			C.registers.P.Negative = i2b(C.registers.A & 0x80)
+			C.registers.P.Zero = !I2b(C.registers.A)
+			C.registers.P.Negative = I2b(C.registers.A & 0x80)
 		} else {
 			data := C.Read(addrOrData, false)
-			C.registers.P.Carry = i2b(data & 0x80)
+			C.registers.P.Carry = I2b(data & 0x80)
 			shifted := (data << 1) & 0xFF
 			C.Write(addrOrData, byte(shifted))
-			C.registers.P.Zero = !i2b(shifted)
-			C.registers.P.Negative = i2b(shifted & 0x80)
+			C.registers.P.Zero = !I2b(shifted)
+			C.registers.P.Negative = I2b(shifted & 0x80)
 		}
 		break
 	case "BIT":
 		data := C.Read(addrOrData, false)
-		C.registers.P.Negative = i2b(data & 0x80)
-		C.registers.P.Overflow = i2b(data & 0x40)
-		C.registers.P.Zero = !i2b(C.registers.A & data)
+		C.registers.P.Negative = I2b(data & 0x80)
+		C.registers.P.Overflow = I2b(data & 0x40)
+		C.registers.P.Zero = !I2b(C.registers.A & data)
 		break
 	case "CMP":
-		data := b2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		fmt.Printf("CMP: %d\n", data)
+		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		//fmt.Printf("CMP: %d\n", data)
 		compared := int(C.registers.A) - int(data)
 		C.registers.P.Carry = compared >= 0
-		C.registers.P.Negative = i2b(uint(compared & 0x80))
-		C.registers.P.Zero = !i2b(uint(compared & 0xff))
+		C.registers.P.Negative = I2b(uint(compared & 0x80))
+		C.registers.P.Zero = !I2b(uint(compared & 0xff))
 		break
 	case "CPX":
-		data := b2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
 		compared := int(C.registers.X) - int(data)
-		fmt.Printf("CPX: %d %d\n", compared, uint(compared)&0x80)
+		//fmt.Printf("CPX: %d %d\n", compared, uint(compared)&0x80)
 		C.registers.P.Carry = compared >= 0
-		C.registers.P.Negative = i2b(uint(compared) & 0x80)
-		fmt.Printf("NEG: %d\n", uint(compared)&0xff)
-		C.registers.P.Zero = !i2b(uint(compared) & 0xff)
+		C.registers.P.Negative = I2b(uint(compared) & 0x80)
+		//fmt.Printf("NEG: %d\n", uint(compared)&0xff)
+		C.registers.P.Zero = !I2b(uint(compared) & 0xff)
 		break
 	case "CPY":
-		data := b2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
 		compared := int(C.registers.Y) - int(data)
 		C.registers.P.Carry = compared >= 0
-		C.registers.P.Negative = i2b(uint(compared & 0x80))
-		C.registers.P.Zero = !i2b(uint(compared & 0xff))
+		C.registers.P.Negative = I2b(uint(compared & 0x80))
+		C.registers.P.Zero = !I2b(uint(compared & 0xff))
 		break
 	case "DEC":
 		data := (C.Read(addrOrData, false) - 1) & 0xFF
-		C.registers.P.Negative = i2b(data & 0x80)
-		C.registers.P.Zero = !i2b(data)
+		C.registers.P.Negative = I2b(data & 0x80)
+		C.registers.P.Zero = !I2b(data)
 		C.Write(addrOrData, byte(data))
 		break
 	case "DEX":
 		C.registers.X = (C.registers.X - 1) & 0xFF
-		C.registers.P.Negative = i2b(C.registers.X & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.X)
+		C.registers.P.Negative = I2b(C.registers.X & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.X)
 		break
 	case "DEY":
 		C.registers.Y = (C.registers.Y - 1) & 0xFF
-		C.registers.P.Negative = i2b(C.registers.Y & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.Y)
+		C.registers.P.Negative = I2b(C.registers.Y & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.Y)
 		break
 	case "EOR":
-		data := b2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
 		operated := data ^ C.registers.A
-		C.registers.P.Negative = i2b(operated & 0x80)
-		C.registers.P.Zero = !i2b(operated)
+		C.registers.P.Negative = I2b(operated & 0x80)
+		C.registers.P.Zero = !I2b(operated)
 		C.registers.A = operated & 0xFF
 		break
 	case "INC":
 		data := (C.Read(addrOrData, false) + 1) & 0xFF
-		C.registers.P.Negative = i2b(data & 0x80)
-		C.registers.P.Zero = !i2b(data)
+		C.registers.P.Negative = I2b(data & 0x80)
+		C.registers.P.Zero = !I2b(data)
 		C.Write(addrOrData, byte(data))
 		break
 	case "INX":
 		C.registers.X = (C.registers.X + 1) & 0xFF
-		C.registers.P.Negative = i2b(C.registers.X & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.X)
+		C.registers.P.Negative = I2b(C.registers.X & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.X)
 		break
 	case "INY":
 		C.registers.Y = (C.registers.Y + 1) & 0xFF
-		C.registers.P.Negative = i2b(C.registers.Y & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.Y)
+		C.registers.P.Negative = I2b(C.registers.Y & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.Y)
 		break
 	case "LSR":
 		if mode == Accumulator {
 			acc := C.registers.A & 0xFF
-			C.registers.P.Carry = i2b(acc & 0x01)
+			C.registers.P.Carry = I2b(acc & 0x01)
 			C.registers.A = acc >> 1
-			C.registers.P.Zero = !i2b(C.registers.A)
+			C.registers.P.Zero = !I2b(C.registers.A)
 		} else {
 			data := C.Read(addrOrData, false)
-			C.registers.P.Carry = i2b(data & 0x01)
-			C.registers.P.Zero = !i2b(data >> 1)
+			C.registers.P.Carry = I2b(data & 0x01)
+			C.registers.P.Zero = !I2b(data >> 1)
 			C.Write(addrOrData, byte(data>>1))
 		}
 		C.registers.P.Negative = false
 		break
 	case "ORA":
-		data := b2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
 		operated := data | C.registers.A
-		C.registers.P.Negative = i2b(operated & 0x80)
-		C.registers.P.Zero = !i2b(operated)
+		C.registers.P.Negative = I2b(operated & 0x80)
+		C.registers.P.Zero = !I2b(operated)
 		C.registers.A = operated & 0xFF
 		break
 	case "ROL":
 		if mode == Accumulator {
 			acc := C.registers.A
-			C.registers.A = (acc<<1)&0xFF | b2ix(C.registers.P.Carry, 0x01, 0x00)
-			C.registers.P.Carry = i2b(acc & 0x80)
-			C.registers.P.Zero = !i2b(C.registers.A)
-			C.registers.P.Negative = i2b(C.registers.A & 0x80)
+			C.registers.A = (acc<<1)&0xFF | B2ix(C.registers.P.Carry, 0x01, 0x00)
+			C.registers.P.Carry = I2b(acc & 0x80)
+			C.registers.P.Zero = !I2b(C.registers.A)
+			C.registers.P.Negative = I2b(C.registers.A & 0x80)
 		} else {
 			data := C.Read(addrOrData, false)
-			writeData := (data<<1 | b2i(C.registers.P.Carry)) & 0xFF
+			writeData := (data<<1 | B2i(C.registers.P.Carry)) & 0xFF
 			C.Write(addrOrData, byte(writeData))
-			C.registers.P.Carry = !!i2b(data & 0x80)
-			C.registers.P.Zero = !i2b(writeData)
-			C.registers.P.Negative = i2b(writeData & 0x80)
+			C.registers.P.Carry = !!I2b(data & 0x80)
+			C.registers.P.Zero = !I2b(writeData)
+			C.registers.P.Negative = I2b(writeData & 0x80)
 		}
 		break
 	case "ROR":
 		if mode == Accumulator {
 			acc := C.registers.A
-			C.registers.A = acc>>1 | b2ix(C.registers.P.Carry, 0x80, 0x00)
-			C.registers.P.Carry = i2b(acc & 0x01)
-			C.registers.P.Zero = !i2b(C.registers.A)
-			C.registers.P.Negative = i2b(C.registers.A & 0x80)
+			C.registers.A = acc>>1 | B2ix(C.registers.P.Carry, 0x80, 0x00)
+			C.registers.P.Carry = I2b(acc & 0x01)
+			C.registers.P.Zero = !I2b(C.registers.A)
+			C.registers.P.Negative = I2b(C.registers.A & 0x80)
 		} else {
 			data := C.Read(addrOrData, false)
-			writeData := data>>1 | b2ix(C.registers.P.Carry, 0x80, 0x00)
+			writeData := data>>1 | B2ix(C.registers.P.Carry, 0x80, 0x00)
 			C.Write(addrOrData, byte(writeData))
-			C.registers.P.Carry = i2b(data & 0x01)
-			C.registers.P.Zero = !i2b(writeData)
-			C.registers.P.Negative = i2b(writeData & 0x80)
+			C.registers.P.Carry = I2b(data & 0x01)
+			C.registers.P.Zero = !I2b(writeData)
+			C.registers.P.Negative = I2b(writeData & 0x80)
 		}
 		break
 	case "SBC":
-		data := b2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		operated := C.registers.A - data - b2ix(C.registers.P.Carry, 0, 1)
+		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		operated := C.registers.A - data - B2ix(C.registers.P.Carry, 0, 1)
 		overflow := ((C.registers.A^operated)&0x80) != 0 && ((C.registers.A^data)&0x80) != 0
 		C.registers.P.Overflow = overflow
 		C.registers.P.Carry = operated >= 0
-		C.registers.P.Negative = i2b(operated & 0x80)
-		C.registers.P.Zero = !i2b(operated & 0xFF)
+		C.registers.P.Negative = I2b(operated & 0x80)
+		C.registers.P.Zero = !I2b(operated & 0xFF)
 		C.registers.A = operated & 0xFF
 		break
 	case "PHA":
@@ -488,8 +463,8 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 		break
 	case "PLA":
 		C.registers.A = C.Pop()
-		C.registers.P.Negative = i2b(C.registers.A & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.A)
+		C.registers.P.Negative = I2b(C.registers.A & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.A)
 		break
 	case "PLP":
 		C.popStatus()
@@ -600,8 +575,8 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 	case "LAX":
 		data := C.Read(addrOrData, false)
 		C.registers.A, C.registers.X = data, data
-		C.registers.P.Negative = i2b(C.registers.A & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.A)
+		C.registers.P.Negative = I2b(C.registers.A & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.A)
 		break
 	case "SAX":
 		operated := C.registers.A & C.registers.X
@@ -609,56 +584,56 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 		break
 	case "DCP":
 		operated := (C.Read(addrOrData, false) - 1) & 0xFF
-		C.registers.P.Negative = i2b(((C.registers.A - operated) & 0x1FF) & 0x80)
-		C.registers.P.Zero = !i2b((C.registers.A - operated) & 0x1FF)
+		C.registers.P.Negative = I2b(((C.registers.A - operated) & 0x1FF) & 0x80)
+		C.registers.P.Zero = !I2b((C.registers.A - operated) & 0x1FF)
 		C.Write(addrOrData, byte(operated))
 		break
 	case "ISB":
 		data := (C.Read(addrOrData, false) + 1) & 0xFF
-		operated := (^data & 0xFF) + C.registers.A + b2i(C.registers.P.Carry)
+		operated := (^data & 0xFF) + C.registers.A + B2i(C.registers.P.Carry)
 		overflow := !(((C.registers.A ^ data) & 0x80) != 0) && ((C.registers.A^operated)&0x80) != 0
 		C.registers.P.Overflow = overflow
 		C.registers.P.Carry = operated > 0xFF
-		C.registers.P.Negative = i2b(operated & 0x80)
-		C.registers.P.Zero = !i2b(operated & 0xFF)
+		C.registers.P.Negative = I2b(operated & 0x80)
+		C.registers.P.Zero = !I2b(operated & 0xFF)
 		C.registers.A = operated & 0xFF
 		C.Write(addrOrData, byte(data))
 		break
 	case "SLO":
 		data := C.Read(addrOrData, false)
-		C.registers.P.Carry = i2b(data & 0x80)
+		C.registers.P.Carry = I2b(data & 0x80)
 		data = (data << 1) & 0xFF
 		C.registers.A |= data
-		C.registers.P.Negative = i2b(C.registers.A & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.A & 0xFF)
+		C.registers.P.Negative = I2b(C.registers.A & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.A & 0xFF)
 		C.Write(addrOrData, byte(data))
 		break
 	case "RLA":
-		data := (C.Read(addrOrData, false) << 1) + b2i(C.registers.P.Carry)
-		C.registers.P.Carry = i2b(data & 0x100)
+		data := (C.Read(addrOrData, false) << 1) + B2i(C.registers.P.Carry)
+		C.registers.P.Carry = I2b(data & 0x100)
 		C.registers.A = (data & C.registers.A) & 0xFF
-		C.registers.P.Negative = i2b(C.registers.A & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.A & 0xFF)
+		C.registers.P.Negative = I2b(C.registers.A & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.A & 0xFF)
 		C.Write(addrOrData, byte(data))
 		break
 	case "SRE":
 		data := C.Read(addrOrData, false)
-		C.registers.P.Carry = i2b(data & 0x01)
+		C.registers.P.Carry = I2b(data & 0x01)
 		data >>= 1
 		C.registers.A ^= data
-		C.registers.P.Negative = i2b(C.registers.A & 0x80)
-		C.registers.P.Zero = !i2b(C.registers.A & 0xFF)
+		C.registers.P.Negative = I2b(C.registers.A & 0x80)
+		C.registers.P.Zero = !I2b(C.registers.A & 0xFF)
 		C.Write(addrOrData, byte(data))
 		break
 	case "RRA":
 		data := C.Read(addrOrData, false)
 		carry := data & 0x01
-		data = (data >> 1) | b2ix(C.registers.P.Carry, 0x80, 0x00)
+		data = (data >> 1) | B2ix(C.registers.P.Carry, 0x80, 0x00)
 		operated := data + C.registers.A + carry
 		overflow := !(((C.registers.A ^ data) & 0x80) != 0) && ((C.registers.A^operated)&0x80) != 0
 		C.registers.P.Overflow = overflow
-		C.registers.P.Negative = i2b(operated & 0x80)
-		C.registers.P.Zero = !i2b(operated & 0xFF)
+		C.registers.P.Negative = I2b(operated & 0x80)
+		C.registers.P.Zero = !I2b(operated & 0xFF)
 		C.registers.A = operated & 0xFF
 		C.registers.P.Carry = operated > 0xFF
 		C.Write(addrOrData, byte(data))
@@ -680,5 +655,5 @@ func (C *Cpu) Run() uint {
 	ocp := OpCodes[opcode]
 	data := C.getAddrOrDataWithAdditionalCycle(ocp.Addressing)
 	C.execOpCode(opcode, data)
-	return ocp.Cycle + data.additionalCycle + b2i(C.hasBranched)
+	return ocp.Cycle + data.additionalCycle + B2i(C.hasBranched)
 }
