@@ -1,7 +1,5 @@
 package cpu
 
-type Addressing int
-
 type OpCode struct {
 	FullName   string
 	BaseName   string

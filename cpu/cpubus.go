@@ -32,7 +32,7 @@ func (CB *CpuBus) ReadByCpu(addr uint) byte {
 		return CB.ram.Read(addr - 0x0800)
 	} else if addr < 0x4000 {
 		// mirror
-		data := CB.ppu.Read(addr-0x2000) % 8
+		data := CB.ppu.Read((addr - 0x2000) % 8)
 		return data
 	} else if addr == 0x4016 {
 		// TODO Add 2P

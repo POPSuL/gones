@@ -2,6 +2,8 @@ package cpu
 
 // Addressing
 
+type Addressing int
+
 const (
 	Immediate           = iota
 	ZeroPage            = iota
@@ -17,3 +19,19 @@ const (
 	PostIndexedIndirect = iota
 	IndirectAbsolute    = iota
 )
+
+var AddressingName = map[Addressing]string{
+	Immediate:           "immediate",
+	ZeroPage:            "zeroPage",
+	Relative:            "relative",
+	Implied:             "implied",
+	Absolute:            "absolute",
+	Accumulator:         "accumulator",
+	ZeroPageX:           "zeropagex",
+	ZeroPageY:           "zeropagey",
+	AbsoluteX:           "absoluteX",
+	AbsoluteY:           "absoluteY",
+	PreIndexedIndirect:  "preIndexedIndirect",
+	PostIndexedIndirect: "postIndexedIndirect",
+	IndirectAbsolute:    "indirectAbsolute",
+}

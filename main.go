@@ -73,7 +73,7 @@ func main() {
 
 	rom := reader.ReadRom(nesFile)
 	nes := NewNes(rom)
-	//for true {
-	nes.Frame()
-	//}
+	for true {
+		nes.Frame()
+	}
 }
