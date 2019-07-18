@@ -35,3 +35,19 @@ var AddressingName = map[Addressing]string{
 	PostIndexedIndirect: "postIndexedIndirect",
 	IndirectAbsolute:    "indirectAbsolute",
 }
+
+var AddressingNameShort = map[Addressing]string{
+	Immediate:           "imm",
+	ZeroPage:            "zer",
+	Relative:            "rel",
+	Implied:             "imp",
+	Absolute:            "abs",
+	Accumulator:         "acc",
+	ZeroPageX:           "zerX",
+	ZeroPageY:           "zerY",
+	AbsoluteX:           "absX",
+	AbsoluteY:           "absY",
+	PreIndexedIndirect:  "preII",
+	PostIndexedIndirect: "posII",
+	IndirectAbsolute:    "indAbs",
+}
