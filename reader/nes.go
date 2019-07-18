@@ -12,15 +12,15 @@ const PROGRAM_ROM_SIZE = 0x4000
 const CHARACTER_ROM_SIZE = 0x2000
 
 type NesRom struct {
-	HorizontalMirror bool
-	Program []byte
-	Character []byte
-	ProgramRomPages uint
+	HorizontalMirror  bool
+	Program           []byte
+	Character         []byte
+	ProgramRomPages   uint
 	CharacterRomPages uint
-	Mapper uint
+	Mapper            uint
 }
 
-func ReadRom(file string) (*NesRom) {
+func ReadRom(file string) *NesRom {
 	f, err := os.Open(file)
 	if err != nil {
 		panic(err)
@@ -40,28 +40,28 @@ func ReadRom(file string) (*NesRom) {
 	rom := new(NesRom)
 	rom.ProgramRomPages = uint(buffer[4])
 	rom.CharacterRomPages = uint(buffer[5])
-	rom.HorizontalMirror = uint(buffer[6]) & 0x01 != 1
-	rom.Mapper = (uint(buffer[6]) & 0xf0) >> 4 | (uint(buffer[7]) & 0xf0)
+	rom.HorizontalMirror = uint(buffer[6])&0x01 != 1
+	rom.Mapper = (uint(buffer[6])&0xf0)>>4 | (uint(buffer[7]) & 0xf0)
 
 	fmt.Printf("Program ROM pages: %d\n", rom.ProgramRomPages)
 	fmt.Printf("Character ROM pages: %d\n", rom.CharacterRomPages)
 	fmt.Printf("Mapper: %d\n", rom.Mapper)
 
-	characterRomStart := NES_HEADER_SIZE + rom.ProgramRomPages * PROGRAM_ROM_SIZE
-	characterRomEnd := characterRomStart + rom.CharacterRomPages * CHARACTER_ROM_SIZE
+	characterRomStart := NES_HEADER_SIZE + rom.ProgramRomPages*PROGRAM_ROM_SIZE
+	characterRomEnd := characterRomStart + rom.CharacterRomPages*CHARACTER_ROM_SIZE
 	fmt.Printf("Character ROM start: 0x%x (%d)\n", characterRomStart, characterRomStart)
 	fmt.Printf("Character ROM end: 0x%x (%d)\n", characterRomEnd, characterRomEnd)
 
 	rom.Program = buffer[NES_HEADER_SIZE:characterRomStart]
-	rom.Character = buffer[characterRomStart:characterRomStart+(characterRomEnd-characterRomStart)]
+	rom.Character = buffer[characterRomStart : characterRomStart+(characterRomEnd-characterRomStart)]
 
 	fmt.Printf(
 		"Program   ROM: 0x0000 - 0x%x (%d bytes)\n",
-		len(rom.Program) - 1,
+		len(rom.Program)-1,
 		len(rom.Program))
 	fmt.Printf(
 		"Character   ROM: 0x0000 - 0x%x (%d bytes)\n",
-		len(rom.Character) - 1,
+		len(rom.Character)-1,
 		len(rom.Character))
 
 	return rom

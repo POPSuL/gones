@@ -32,7 +32,7 @@ type Renderer struct {
 
 func NewRenderer() *Renderer {
 	R := new(Renderer)
-	R.drawer = NewPngDrawer()
+	R.drawer = NewSDLDrawer()
 	R.serial = 0
 	R.frameBuffer = make([]uint8, 256*256*4)
 	return R
@@ -40,15 +40,20 @@ func NewRenderer() *Renderer {
 
 func (R *Renderer) shouldPixelHide(x uint, y uint) bool {
 	// TODO: WTF??
+	//return false
+	tileX := ^^(x / 8)
+	tileY := ^^(y / 8)
+	backgroundIndex := tileY*33 + tileX
+
+	//println("xx", x, y)
+
+	sprite := uint(len(R.background)) >= backgroundIndex && R.background[backgroundIndex].Pattern != nil
+	if sprite {
+		return true
+	}
+
 	return false
-	//tileX := ^^(x / 8)
-	//tileY := ^^(y / 8)
-	//backgroundIndex := tileY * 33 + tileX
-	//sprite := R.background[backgroundIndex] && R.background[backgroundIndex].Pattern
-	//if sprite {
-	//	return true
-	//}
-	//// NOTE: If background pixel is not transparent, we need to hide sprite.
+	// NOTE: If background pixel is not transparent, we need to hide sprite.
 	//return !((sprite[y % 8] && sprite[y % 8][x % 8] % 4) == 0)
 }
 
@@ -87,7 +92,7 @@ func (R *Renderer) renderTile(tile Tile, tileX uint, tileY uint, palette []byte)
 	offsetY := tile.scrollY % 8
 	for i := uint(0); i < 8; i++ {
 		for j := uint(0); j < 8; j++ {
-			paletteIndex := tile.paletteId*4 + tile.pattern[i][j]
+			paletteIndex := tile.paletteId*4 + tile.Pattern[i][j]
 			colorId := palette[paletteIndex]
 			color := COLORS[colorId]
 			x := tileX + j - offsetX
@@ -118,10 +123,12 @@ func (R *Renderer) renderSprite(sprite SpriteWithAttribute, palette []byte) {
 			if sprite.sprite != nil && sprite.sprite[i][j] > 0 {
 				colorId := palette[paletteId*4+sprite.sprite[i][j]+0x10]
 				color := COLORS[colorId]
-				index := (x + y*0x100) * 4
+				index := (x + y*0x100)
+				//println(index, colorId, len(R.frameBuffer))
 				R.frameBuffer[index] = color[0]
 				R.frameBuffer[index+1] = color[1]
 				R.frameBuffer[index+2] = color[2]
+				//R.frameBuffer[index+3] = 0xff
 				// data[index + 3] = 0xFF;
 			}
 		}

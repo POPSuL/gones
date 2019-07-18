@@ -43,9 +43,10 @@ func (CB *CpuBus) ReadByCpu(addr uint) byte {
 	} else if addr >= 0xC000 {
 		// Mirror, if prom block number equals 1
 		if CB.programRom.Size() <= 0x4000 {
+			//fmt.Printf("ReadByCpu(%04x): %04x\n", addr, CB.programRom.Read(addr-0xC000))
 			return CB.programRom.Read(addr - 0xC000)
 		}
-		//fmt.Printf("ReadByCpu(%d): %d\n", addr, CB.programRom.Read(addr-0x8000))
+		//fmt.Printf("ReadByCpu(%04x): %04x\n", addr, CB.programRom.Read(addr-0x8000))
 		return CB.programRom.Read(addr - 0x8000)
 	} else if addr >= 0x8000 {
 		// ROM

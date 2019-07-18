@@ -1,13 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"github.com/popsul/gones/bus"
 	"github.com/popsul/gones/cpu"
 	"github.com/popsul/gones/interrupts"
 	"github.com/popsul/gones/ppu"
 	"github.com/popsul/gones/reader"
 	"os"
+	"runtime"
 )
 
 type Nes struct {
@@ -63,12 +63,16 @@ func (N *Nes) Frame() {
 		cycle += N.cpu.Run()
 		renderingData := N.ppu.Run(cycle * 3)
 		if renderingData != nil {
-			fmt.Printf("RenderingData is not nil!\n")
+			//fmt.Printf("RenderingData is not nil!\n")
 			//	N.cpu.bus->keypad->fetch();
 			N.renderer.Render(renderingData)
 			break
 		}
 	}
+}
+
+func (N *Nes) Dump() {
+	N.cpu.Dump()
 }
 
 func main() {
@@ -77,7 +81,10 @@ func main() {
 
 	rom := reader.ReadRom(nesFile)
 	nes := NewNes(rom)
+	//nes.Dump()
+	//return
 	for true {
 		nes.Frame()
+		runtime.Gosched()
 	}
 }

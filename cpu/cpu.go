@@ -202,7 +202,7 @@ func (C *Cpu) getAddrOrDataWithAdditionalCycle(mode Addressing) AddrOrDataAndAdd
 
 func (C *Cpu) dumpRegisters() {
 	fmt.Printf(
-		"0b%d%d%d%d%d%d%d%d\t%d\t%d\t%d\t%d\t%d\n",
+		"0b%d%d%d%d%d%d%d%d SP: 0x%04x PC: 0x%04x A: 0x%02x X: 0x%02x Y: 0x%02x\n",
 		B2i(C.registers.P.DecimalMode),
 		B2i(C.registers.P.Zero),
 		B2i(C.registers.P.Negative),
@@ -224,20 +224,23 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 	addrOrData := dataInfo.addrOrData
 	mode := opInfo.Addressing
 	instrNumber++
-	//fmt.Printf(
-	//	"OP %d (%s) ADDR: 0x%04x (%s)\n",
-	//	instrNumber,
-	//	opInfo.BaseName,
-	//	dataInfo.addrOrData,
-	//	AddressingName[opInfo.Addressing],
-	//)
+	//if instrNumber > 200000 {
+	fmt.Printf(
+		"OP %d (%s) ADDR: 0x%04x (%s)\n",
+		instrNumber,
+		opInfo.BaseName,
+		dataInfo.addrOrData,
+		AddressingName[opInfo.Addressing],
+	)
 
-	//C.dumpRegisters()
+	C.dumpRegisters()
+	//}
 
 	C.hasBranched = false
 	switch opInfo.BaseName {
 	case "LDA":
 		C.registers.A = B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		fmt.Printf("0x%04x 0x%04x\n", addrOrData, C.registers.A)
 		C.registers.P.Negative = I2b(C.registers.A & 0x80)
 		C.registers.P.Zero = !I2b(C.registers.A)
 		break
@@ -655,5 +658,21 @@ func (C *Cpu) Run() uint {
 	ocp := OpCodes[opcode]
 	data := C.getAddrOrDataWithAdditionalCycle(ocp.Addressing)
 	C.execOpCode(opcode, data)
+	//fmt.Printf(
+	//	"%d+%d+%d=%d\n",
+	//	ocp.Cycle,
+	//	data.additionalCycle,
+	//	B2i(C.hasBranched),
+	//	ocp.Cycle + data.additionalCycle + B2i(C.hasBranched))
 	return ocp.Cycle + data.additionalCycle + B2i(C.hasBranched)
+}
+
+func (C *Cpu) Dump() {
+	for {
+		pc := C.registers.PC
+		opcode := C.Fetch(C.registers.PC, false)
+		ocp := OpCodes[opcode]
+		data := C.getAddrOrDataWithAdditionalCycle(ocp.Addressing)
+		fmt.Printf("0x%04x\t%s\t%04x\n", pc, ocp.FullName, data.addrOrData)
+	}
 }

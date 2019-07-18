@@ -38,8 +38,8 @@ type Ppu struct {
 		|  7   | Assert NMI when VBlank 0: disable, 1:enable |
 		|  6   | PPU master/slave, always 1                  |
 		|  5   | Sprite size 0: 8x8, 1: 8x16                 |
-		|  4   | Bg pattern table 0:0x0000, 1:0x1000         |
-		|  3   | sprite pattern table 0:0x0000, 1:0x1000     |
+		|  4   | Bg Pattern table 0:0x0000, 1:0x1000         |
+		|  3   | sprite Pattern table 0:0x0000, 1:0x1000     |
 		|  2   | PPU memory increment 0: +=1, 1:+=32         |
 		|  1-0 | Name table 0x00: 0x2000                     |
 		|      |            0x01: 0x2400                     |
@@ -430,21 +430,34 @@ func (P *Ppu) buildBackground() {
 	// while values of 240 to 255 are treated as -16 through -1 in a way, but tile data is incorrectly
 	// fetched from the attribute table.
 	clampedTileY := P.tileY() % 30
-	tableIdOffset := I2ix(^^(P.tileY()/30)%2, 2, 0)
+	tableIdOffset := I2ix((^^(P.tileY() / 30))%2, 2, 0)
 	// background of a line.
 	// Build viewport + 1 tile for background scroll.
 	for x := uint(0); x < 32+1; x++ {
 		tileX := x + P.scrollTileX()
 		clampedTileX := tileX % 32
-		nameTableId := (^^(tileX / 32) % 2) + tableIdOffset
+		nameTableId := ((^^(tileX / 32)) % 2) + tableIdOffset
 		offsetAddrByNameTable := nameTableId * 0x400
 		tile := P.buildTile(clampedTileX, clampedTileY, offsetAddrByNameTable)
 		P.background = append(P.background, tile)
 	}
 }
 
+func (P *Ppu) TransferSprite(index uint, data byte) {
+	// The DMA transfer will begin at the current OAM write address.
+	// It is common practice to initialize it to 0 with a write to PPU 0x2003 before the DMA transfer.
+	// Different starting addresses can be used for a simple OAM cycling technique
+	// to alleviate sprite priority conflicts by flickering. If using this technique
+	// after the DMA OAMADDR should be set to 0 before the end of vblank to prevent potential OAM corruption
+	// (See: Errata).
+	// However, due to OAMADDR writes also having a "corruption" effect[5] this technique is not recommended.
+	addr := index + P.spriteRamAddr
+	P.spriteRam.Write(addr%0x100, data)
+}
+
 func (P *Ppu) Run(cycle uint) *RenderingData {
 	P.cycle += cycle
+	//fmt.Printf("%d %d\n", cycle, P.cycle)
 	if P.line == 0 {
 		P.background = []Tile{}
 		P.buildSprites()

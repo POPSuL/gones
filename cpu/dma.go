@@ -34,7 +34,14 @@ func (D *Dma) IsDmaProcessing() bool {
 }
 
 func (D *Dma) Run() {
+	if !D.isProcessing {
+		return
+	}
 
+	for i := uint(0); i < 0x100; i++ {
+		D.ppu.TransferSprite(i, D.ram.Read(D.ramAddr+i))
+	}
+	D.isProcessing = false
 }
 
 func (D *Dma) Write(data byte) {
