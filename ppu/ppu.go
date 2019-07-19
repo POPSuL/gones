@@ -170,6 +170,7 @@ func (P *Ppu) ReadVram() byte {
 }
 
 func (P *Ppu) Read(addr uint) byte {
+	var data byte = 0
 	/*
 		| bit  | description                                 |
 		+------+---------------------------------------------+
@@ -181,23 +182,27 @@ func (P *Ppu) Read(addr uint) byte {
 	*/
 	if addr == 0x0002 {
 		P.isHorizontalScroll = true
-		data := P.registers[0x02]
+		data = P.registers[0x02]
 		P.clearVblank()
 		// P.clearSpriteHit();
-		return byte(data)
 	}
 	// Write OAM data here. Writes will increment OAMADDR after the write
 	// reads during vertical or forced blanking return the value from OAM at that address but do not increment.
 	if addr == 0x0004 {
-		return P.spriteRam.Read(P.spriteRamAddr)
+		data = P.spriteRam.Read(P.spriteRamAddr)
 	}
 	if addr == 0x0007 {
-		return P.ReadVram()
+		data = P.ReadVram()
 	}
-	return 0
+
+	//fmt.Printf("PPURD 0x%04x 0x%02x\n", addr, data)
+
+	return data
 }
 
 func (P *Ppu) Write(addr uint, data byte) {
+	//fmt.Printf("PPUWR 0x%04x 0x%02x\n", addr, data)
+
 	if addr == 0x0003 {
 		P.writeSpriteRamAddr(data)
 	}
@@ -221,6 +226,7 @@ func (P *Ppu) writeSpriteRamAddr(data byte) {
 }
 
 func (P *Ppu) writeSpriteRamData(data byte) {
+	//fmt.Printf("WSRD: 0x%04x 0x%02x\n", P.spriteRamAddr, data)
 	P.spriteRam.Write(P.spriteRamAddr, data)
 	P.spriteRamAddr += 1
 }
@@ -257,6 +263,7 @@ func (P *Ppu) calcVramAddr() uint {
 }
 
 func (P *Ppu) writeVramData(data byte) {
+	//fmt.Printf("VR: 0x%04x\n", P.vramAddr)
 	if P.vramAddr >= 0x2000 {
 		if P.vramAddr >= 0x3f00 && P.vramAddr < 0x4000 {
 			P.palette.Write(P.vramAddr-0x3f00, data)
@@ -282,15 +289,19 @@ func (P *Ppu) getPalette() []byte {
 }
 
 func (P *Ppu) clearSpriteHit() {
+	//fmt.Printf("clearSpriteHit\n")
 	P.registers[0x02] &= 0xbf
 }
 
 func (P *Ppu) setSpriteHit() {
+	//fmt.Printf("setSpriteHit\n")
 	P.registers[0x02] |= 0x40
 }
 
 func (P *Ppu) hasSpriteHit() bool {
+	//P.spriteRam.Dump()
 	y := uint(P.spriteRam.Read(0))
+	//fmt.Printf("HSH Y 0x%04x L 0x%04x y %t b %t s %t\n", y, P.line, y == P.line, P.isBackgroundEnable(), P.isSpriteEnable())
 	return (y == P.line) && P.isBackgroundEnable() && P.isSpriteEnable()
 }
 
@@ -338,6 +349,7 @@ func (P *Ppu) backgroundTableOffset() uint {
 }
 
 func (P *Ppu) setVblank() {
+	//fmt.Printf("setVBlank\n")
 	P.registers[0x02] |= 0x80
 }
 
@@ -346,6 +358,7 @@ func (P *Ppu) isVblank() bool {
 }
 
 func (P *Ppu) clearVblank() {
+	//fmt.Printf("clearVBlank\n")
 	P.registers[0x02] &= 0x7F
 }
 
@@ -451,6 +464,7 @@ func (P *Ppu) TransferSprite(index uint, data byte) {
 	// after the DMA OAMADDR should be set to 0 before the end of vblank to prevent potential OAM corruption
 	// (See: Errata).
 	// However, due to OAMADDR writes also having a "corruption" effect[5] this technique is not recommended.
+	//fmt.Printf("TransferSprite: 0x%04x 0x%02x 0x%02x 0x%06x\n", index, data, P.spriteRamAddr, (index + P.spriteRamAddr) % 0x100)
 	addr := index + P.spriteRamAddr
 	P.spriteRam.Write(addr%0x100, data)
 }
@@ -466,6 +480,7 @@ func (P *Ppu) Run(cycle uint) *RenderingData {
 	if P.cycle >= 341 {
 		P.cycle -= 341
 		P.line++
+		//fmt.Printf("PPU: C: %d L: %d\n", P.cycle, P.line)
 		if P.hasSpriteHit() {
 			P.setSpriteHit()
 		}

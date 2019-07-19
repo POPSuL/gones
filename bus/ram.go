@@ -1,5 +1,7 @@
 package bus
 
+import "fmt"
+
 type Ram struct {
 	size uint
 	data []byte
@@ -12,7 +14,7 @@ func NewRam(size uint) *Ram {
 	return ram
 }
 
-func (R *Ram) Reset()  {
+func (R *Ram) Reset() {
 	R.data = make([]byte, R.size)
 }
 
@@ -29,4 +31,11 @@ func (R *Ram) Fill(bytes []byte) {
 
 func (R *Ram) Size() uint {
 	return R.size
+}
+
+func (R *Ram) Dump() {
+	for _, x := range R.data {
+		fmt.Printf("0x%02x ", x)
+	}
+	fmt.Printf("\n")
 }

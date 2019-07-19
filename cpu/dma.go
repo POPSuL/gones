@@ -45,6 +45,7 @@ func (D *Dma) Run() {
 }
 
 func (D *Dma) Write(data byte) {
-	D.ramAddr = uint(data << 8)
+	D.ramAddr = uint(data) << 8
 	D.isProcessing = true
+	//fmt.Printf("DMA: 0x%04x 0x%04x\n", D.ramAddr, data)
 }

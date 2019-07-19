@@ -24,38 +24,40 @@ func NewCpuBus(ram *bus.Ram, prgRom *bus.Rom, ppu *ppu.Ppu, keypad *bus.Keypad, 
 }
 
 func (CB *CpuBus) ReadByCpu(addr uint) byte {
-	//fmt.Printf("ReadByCpu(%d)\n", addr)
+	var data byte = 0
 	if addr < 0x0800 {
-		return CB.ram.Read(addr)
+		data = CB.ram.Read(addr)
 	} else if addr < 0x2000 {
 		// mirror
-		return CB.ram.Read(addr - 0x0800)
+		data = CB.ram.Read(addr - 0x0800)
 	} else if addr < 0x4000 {
 		// mirror
-		data := CB.ppu.Read((addr - 0x2000) % 8)
-		return data
+		data = CB.ppu.Read((addr - 0x2000) % 8)
 	} else if addr == 0x4016 {
 		// TODO Add 2P
 		if CB.keypad.Read() {
-			return 1
+			data = 1
 		}
-		return 0
+		data = 0
 	} else if addr >= 0xC000 {
 		// Mirror, if prom block number equals 1
 		if CB.programRom.Size() <= 0x4000 {
-			//fmt.Printf("ReadByCpu(%04x): %04x\n", addr, CB.programRom.Read(addr-0xC000))
-			return CB.programRom.Read(addr - 0xC000)
+			data = CB.programRom.Read(addr - 0xC000)
+		} else {
+			data = CB.programRom.Read(addr - 0x8000)
 		}
-		//fmt.Printf("ReadByCpu(%04x): %04x\n", addr, CB.programRom.Read(addr-0x8000))
-		return CB.programRom.Read(addr - 0x8000)
 	} else if addr >= 0x8000 {
 		// ROM
-		return CB.programRom.Read(addr - 0x8000)
+		data = CB.programRom.Read(addr - 0x8000)
 	}
-	return 0
+
+	//fmt.Printf("RBC 0x%04x 0x%02x\n", addr, data)
+
+	return data
 }
 
 func (CB *CpuBus) WriteByCpu(addr uint, data byte) {
+	//fmt.Printf("WBC 0x%04x 0x%02x\n", addr, data)
 	if addr < 0x0800 {
 		// RAM
 		CB.ram.Write(addr, data)

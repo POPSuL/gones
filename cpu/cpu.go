@@ -56,6 +56,7 @@ func (C *Cpu) Fetch(addr uint, asWord bool) uint {
 
 func (C *Cpu) Read(addr uint, asWord bool) uint {
 	addr &= 0xFFFF
+	//fmt.Printf("aswrd: %t\n", asWord)
 	if asWord {
 		return uint(C.bus.ReadByCpu(addr)) | (uint(C.bus.ReadByCpu(addr+1)) << 8)
 	}
@@ -224,38 +225,50 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 	addrOrData := dataInfo.addrOrData
 	mode := opInfo.Addressing
 	instrNumber++
-	if instrNumber > 198000 {
-		fmt.Printf(
-			"%d (%s) ADDR: 0x%04x (%s) ",
-			instrNumber,
-			opInfo.BaseName,
-			dataInfo.addrOrData,
-			AddressingNameShort[opInfo.Addressing],
-		)
-
-		C.dumpRegisters()
-	}
+	//if instrNumber > 0 {
+	//	fmt.Printf(
+	//		"%d (%s) ADDR: 0x%04x (%s) ",
+	//		instrNumber,
+	//		opInfo.BaseName,
+	//		dataInfo.addrOrData,
+	//		AddressingNameShort[opInfo.Addressing],
+	//	)
+	//
+	//	C.dumpRegisters()
+	//}
 
 	C.hasBranched = false
+	var tmpData uint
 	switch opInfo.BaseName {
 	case "LDA":
-		C.registers.A = B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		//fmt.Printf("0x%04x 0x%04x\n", addrOrData, C.registers.A)
+		data := C.Read(addrOrData, false)
+		C.registers.A = B2ix(mode == Immediate, addrOrData, data)
+		//fmt.Printf("LDA 0x%04x 0x%04x 0x%04x\n", addrOrData, C.registers.A, data)
 		C.registers.P.Negative = I2b(C.registers.A & 0x80)
 		C.registers.P.Zero = !I2b(C.registers.A)
 		break
 	case "LDX":
-		C.registers.X = B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		if mode == Immediate {
+			tmpData = addrOrData
+		} else {
+			tmpData = C.Read(addrOrData, false)
+		}
+		C.registers.X = tmpData
 		C.registers.P.Negative = I2b(C.registers.X & 0x80)
 		C.registers.P.Zero = !I2b(C.registers.X)
 		break
 	case "LDY":
-		C.registers.Y = B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
+		if mode == Immediate {
+			tmpData = addrOrData
+		} else {
+			tmpData = C.Read(addrOrData, false)
+		}
+		C.registers.Y = tmpData
 		C.registers.P.Negative = I2b(C.registers.Y & 0x80)
 		C.registers.P.Zero = !I2b(C.registers.Y)
 		break
 	case "STA":
-		//fmt.Printf("STA %d %d\n", addrOrData, C.registers.A)
+		//fmt.Printf("STA 0x%04x 0x%02x\n", addrOrData, C.registers.A)
 		C.Write(addrOrData, byte(C.registers.A))
 		break
 	case "STX":
@@ -293,9 +306,13 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 		C.registers.P.Zero = !I2b(C.registers.A)
 		break
 	case "ADC":
-		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		operated := data + C.registers.A + B2i(C.registers.P.Carry)
-		overflow := !(((C.registers.A ^ data) & 0x80) != 0) && ((C.registers.A^operated)&0x80) != 0
+		if mode == Immediate {
+			tmpData = addrOrData
+		} else {
+			tmpData = C.Read(addrOrData, false)
+		}
+		operated := tmpData + C.registers.A + B2i(C.registers.P.Carry)
+		overflow := !(((C.registers.A ^ tmpData) & 0x80) != 0) && ((C.registers.A^operated)&0x80) != 0
 		C.registers.P.Overflow = overflow
 		C.registers.P.Carry = operated > 0xFF
 		C.registers.P.Negative = I2b(operated & 0x80)
@@ -303,8 +320,12 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 		C.registers.A = operated & 0xFF
 		break
 	case "AND":
-		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		operated := data & C.registers.A
+		if mode == Immediate {
+			tmpData = addrOrData
+		} else {
+			tmpData = C.Read(addrOrData, false)
+		}
+		operated := tmpData & C.registers.A
 		C.registers.P.Negative = I2b(operated & 0x80)
 		C.registers.P.Zero = !I2b(operated)
 		C.registers.A = operated & 0xFF
@@ -332,25 +353,34 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 		C.registers.P.Zero = !I2b(C.registers.A & data)
 		break
 	case "CMP":
-		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		//fmt.Printf("CMP: %d\n", data)
-		compared := int(C.registers.A) - int(data)
+		if mode == Immediate {
+			tmpData = addrOrData
+		} else {
+			tmpData = C.Read(addrOrData, false)
+		}
+		compared := int(C.registers.A) - int(tmpData)
 		C.registers.P.Carry = compared >= 0
 		C.registers.P.Negative = I2b(uint(compared & 0x80))
 		C.registers.P.Zero = !I2b(uint(compared & 0xff))
 		break
 	case "CPX":
-		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		compared := int(C.registers.X) - int(data)
-		//fmt.Printf("CPX: %d %d\n", compared, uint(compared)&0x80)
+		if mode == Immediate {
+			tmpData = addrOrData
+		} else {
+			tmpData = C.Read(addrOrData, false)
+		}
+		compared := int(C.registers.X) - int(tmpData)
 		C.registers.P.Carry = compared >= 0
 		C.registers.P.Negative = I2b(uint(compared) & 0x80)
-		//fmt.Printf("NEG: %d\n", uint(compared)&0xff)
 		C.registers.P.Zero = !I2b(uint(compared) & 0xff)
 		break
 	case "CPY":
-		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		compared := int(C.registers.Y) - int(data)
+		if mode == Immediate {
+			tmpData = addrOrData
+		} else {
+			tmpData = C.Read(addrOrData, false)
+		}
+		compared := int(C.registers.Y) - int(tmpData)
 		C.registers.P.Carry = compared >= 0
 		C.registers.P.Negative = I2b(uint(compared & 0x80))
 		C.registers.P.Zero = !I2b(uint(compared & 0xff))
@@ -372,8 +402,12 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 		C.registers.P.Zero = !I2b(C.registers.Y)
 		break
 	case "EOR":
-		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		operated := data ^ C.registers.A
+		if mode == Immediate {
+			tmpData = addrOrData
+		} else {
+			tmpData = C.Read(addrOrData, false)
+		}
+		operated := tmpData ^ C.registers.A
 		C.registers.P.Negative = I2b(operated & 0x80)
 		C.registers.P.Zero = !I2b(operated)
 		C.registers.A = operated & 0xFF
@@ -409,8 +443,12 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 		C.registers.P.Negative = false
 		break
 	case "ORA":
-		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		operated := data | C.registers.A
+		if mode == Immediate {
+			tmpData = addrOrData
+		} else {
+			tmpData = C.Read(addrOrData, false)
+		}
+		operated := tmpData | C.registers.A
 		C.registers.P.Negative = I2b(operated & 0x80)
 		C.registers.P.Zero = !I2b(operated)
 		C.registers.A = operated & 0xFF
@@ -448,14 +486,18 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 		}
 		break
 	case "SBC":
-		data := B2ix(mode == Immediate, addrOrData, C.Read(addrOrData, false))
-		operated := C.registers.A - data - B2ix(C.registers.P.Carry, 0, 1)
-		overflow := ((C.registers.A^operated)&0x80) != 0 && ((C.registers.A^data)&0x80) != 0
+		if mode == Immediate {
+			tmpData = addrOrData
+		} else {
+			tmpData = C.Read(addrOrData, false)
+		}
+		operated := int(C.registers.A) - int(tmpData) - int(B2ix(C.registers.P.Carry, 0, 1))
+		overflow := ((C.registers.A^uint(operated))&0x80) != 0 && ((C.registers.A^tmpData)&0x80) != 0
 		C.registers.P.Overflow = overflow
 		C.registers.P.Carry = operated >= 0
-		C.registers.P.Negative = I2b(operated & 0x80)
-		C.registers.P.Zero = !I2b(operated & 0xFF)
-		C.registers.A = operated & 0xFF
+		C.registers.P.Negative = Int2b(operated & 0x80)
+		C.registers.P.Zero = !I2b(uint(operated) & 0xFF)
+		C.registers.A = uint(operated) & 0xFF
 		break
 	case "PHA":
 		C.Push(byte(C.registers.A))

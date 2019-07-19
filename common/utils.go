@@ -24,3 +24,7 @@ func I2ix(i uint, true uint, false uint) uint {
 func I2b(i uint) bool {
 	return i > 0
 }
+
+func Int2b(i int) bool {
+	return i > 0
+}
