@@ -48,7 +48,7 @@ func NewNes(rom *reader.NesRom) *Nes {
 	nes.cpu = cpu.NewCpu(nes.cpuBus, nes.interrupts)
 	nes.cpu.Reset()
 
-	nes.renderer = ppu.NewRenderer()
+	nes.renderer = ppu.NewRenderer(nes.keypad)
 
 	return nes
 }

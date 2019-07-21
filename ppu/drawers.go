@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne"
 	"fyne.io/fyne/app"
 	"fyne.io/fyne/canvas"
+	"github.com/popsul/gones/bus"
 	"github.com/veandco/go-sdl2/sdl"
 	"github.com/veandco/go-sdl2/ttf"
 	"image"
@@ -31,10 +32,12 @@ type FyneDrawer struct {
 }
 
 type SDLDrawer struct {
-	renderer sdl.Renderer
-	window   *sdl.Window
-	surface  *sdl.Surface
-	frame    int64
+	renderer   sdl.Renderer
+	window     *sdl.Window
+	surface    *sdl.Surface
+	controller *sdl.GameController
+	frame      int64
+	keypad     *bus.Keypad
 }
 
 func NewPngDrawer() *PngDrawer {
@@ -99,7 +102,7 @@ func (D *FyneDrawer) Draw(buffer []uint8) {
 	//D.root.Canvas().Refresh(nil)
 }
 
-func NewSDLDrawer() *SDLDrawer {
+func NewSDLDrawer(keypad *bus.Keypad) *SDLDrawer {
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
 	}
@@ -121,11 +124,24 @@ func NewSDLDrawer() *SDLDrawer {
 
 	rdr, _ := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
 
+	var controller *sdl.GameController = nil
+	for i := 0; i < sdl.NumJoysticks(); i++ {
+		if sdl.IsGameController(i) {
+			fmt.Printf("Found controller %d\n", i)
+			controller = sdl.GameControllerOpen(i)
+			if controller != nil {
+				fmt.Printf("Opened %s\n", controller.Name())
+			}
+		}
+	}
+
 	return &SDLDrawer{
 		*rdr,
 		window,
 		surface,
+		controller,
 		0,
+		keypad,
 	}
 }
 
@@ -170,5 +186,78 @@ func (D *SDLDrawer) Draw(buffer []byte) {
 		if event.GetType() == sdl.QUIT {
 			os.Exit(0)
 		}
+		switch event.(type) {
+		case *sdl.KeyboardEvent:
+			ev := event.(*sdl.KeyboardEvent)
+			if ev.Type == sdl.KEYDOWN {
+				//fmt.Printf("keydown 0x%02x\n", D.matchKey(ev.Keysym.Sym))
+				D.keypad.KeyDown(D.matchKey(ev.Keysym.Sym))
+			} else if ev.Type == sdl.KEYUP {
+				//println("keyup")
+				D.keypad.KeyUp(D.matchKey(ev.Keysym.Sym))
+			} else {
+				println(ev.Type)
+				println(ev.Keysym.Scancode)
+			}
+		case *sdl.ControllerButtonEvent:
+			ev := event.(*sdl.ControllerButtonEvent)
+			if ev.Type == sdl.CONTROLLERBUTTONDOWN {
+				//fmt.Printf("keydown 0x%02x\n", D.matchControllerButton(ev.Button))
+				D.keypad.KeyDown(D.matchControllerButton(ev.Button))
+			} else if ev.Type == sdl.CONTROLLERBUTTONUP {
+				//println("keyup")
+				D.keypad.KeyUp(D.matchControllerButton(ev.Button))
+			} else {
+				println(ev.Type)
+			}
+			//fmt.Println(event.GetType())
+		}
 	}
+}
+
+func (D *SDLDrawer) matchKey(key sdl.Keycode) uint {
+	//Maps a keyboard key to a nes key.
+	// A, B, SELECT, START, ↑, ↓, ←, →
+	switch key {
+	case sdl.K_SEMICOLON:
+		return 0
+	case sdl.K_COMMA:
+		return 1
+	case sdl.K_TAB:
+		return 2
+	case sdl.K_SPACE:
+		return 3
+	case sdl.K_w:
+		return 4
+	case sdl.K_s:
+		return 5
+	case sdl.K_a:
+		return 6
+	case sdl.K_d:
+		return 7
+	}
+	return 8
+}
+
+func (D *SDLDrawer) matchControllerButton(key uint8) uint {
+	switch key {
+	case sdl.CONTROLLER_BUTTON_A:
+		return 0
+	case sdl.CONTROLLER_BUTTON_B:
+		return 1
+	case sdl.CONTROLLER_BUTTON_BACK:
+		return 2
+	case sdl.CONTROLLER_BUTTON_START:
+		return 3
+	case sdl.CONTROLLER_BUTTON_DPAD_UP:
+		return 4
+	case sdl.CONTROLLER_BUTTON_DPAD_DOWN:
+		return 5
+	case sdl.CONTROLLER_BUTTON_DPAD_LEFT:
+		return 6
+	case sdl.CONTROLLER_BUTTON_DPAD_RIGHT:
+		return 7
+
+	}
+	return 8
 }

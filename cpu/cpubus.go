@@ -51,13 +51,10 @@ func (CB *CpuBus) ReadByCpu(addr uint) byte {
 		data = CB.programRom.Read(addr - 0x8000)
 	}
 
-	//fmt.Printf("RBC 0x%04x 0x%02x\n", addr, data)
-
 	return data
 }
 
 func (CB *CpuBus) WriteByCpu(addr uint, data byte) {
-	//fmt.Printf("WBC 0x%04x 0x%02x\n", addr, data)
 	if addr < 0x0800 {
 		// RAM
 		CB.ram.Write(addr, data)

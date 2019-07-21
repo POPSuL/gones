@@ -1,6 +1,7 @@
 package ppu
 
 import (
+	"github.com/popsul/gones/bus"
 	. "github.com/popsul/gones/common"
 )
 
@@ -30,9 +31,9 @@ type Renderer struct {
 	drawer      Drawer
 }
 
-func NewRenderer() *Renderer {
+func NewRenderer(keypad *bus.Keypad) *Renderer {
 	R := new(Renderer)
-	R.drawer = NewSDLDrawer()
+	R.drawer = NewSDLDrawer(keypad)
 	R.serial = 0
 	R.frameBuffer = make([]uint8, 256*256*4)
 	return R
