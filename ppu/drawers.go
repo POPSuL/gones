@@ -14,6 +14,8 @@ import (
 )
 
 const dst = "./screen"
+const width = 256
+const height = 224
 
 type Drawer interface {
 	Draw(buffer []uint8)
@@ -42,9 +44,9 @@ func NewPngDrawer() *PngDrawer {
 }
 
 func (D *PngDrawer) Draw(buffer []uint8) {
-	img := image.NewRGBA(image.Rect(0, 0, 256, 224))
-	for y := 0; y < 224; y++ {
-		for x := 0; x < 256; x++ {
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
 			index := uint((x + (y * 0x100)) * 4)
 			img.Set(x, y, color.RGBA{
 				R: buffer[index],
@@ -103,7 +105,7 @@ func NewSDLDrawer() *SDLDrawer {
 	}
 	ttf.Init()
 	window, err := sdl.CreateWindow("test", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
-		256, 224, sdl.WINDOW_SHOWN)
+		width*2, height*2, sdl.WINDOW_SHOWN)
 	if err != nil {
 		panic(err)
 	}
@@ -112,7 +114,7 @@ func NewSDLDrawer() *SDLDrawer {
 		panic(err)
 	}
 	//surface.FillRect(nil, 0)
-	rect := sdl.Rect{0, 0, 256, 244}
+	rect := sdl.Rect{W: width * 2, H: height * 2}
 	surface.FillRect(&rect, 0xff000000)
 	surface.SetClipRect(&rect)
 	window.UpdateSurface()
@@ -128,10 +130,28 @@ func NewSDLDrawer() *SDLDrawer {
 }
 
 func (D *SDLDrawer) Draw(buffer []byte) {
-	for y := 0; y < 224; y++ {
-		for x := 0; x < 256; x++ {
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
 			index := uint((x + (y * 0x100)) * 4)
-			D.surface.Set(x, y, color.RGBA{
+			D.surface.Set(x*2, y*2, color.RGBA{
+				R: buffer[index],
+				G: buffer[index+1],
+				B: buffer[index+2],
+				A: 0xff,
+			})
+			D.surface.Set(x*2+1, y*2, color.RGBA{
+				R: buffer[index],
+				G: buffer[index+1],
+				B: buffer[index+2],
+				A: 0xff,
+			})
+			D.surface.Set(x*2, y*2+1, color.RGBA{
+				R: buffer[index],
+				G: buffer[index+1],
+				B: buffer[index+2],
+				A: 0xff,
+			})
+			D.surface.Set(x*2+1, y*2+1, color.RGBA{
 				R: buffer[index],
 				G: buffer[index+1],
 				B: buffer[index+2],

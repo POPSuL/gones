@@ -123,8 +123,7 @@ func (R *Renderer) renderSprite(sprite SpriteWithAttribute, palette []byte) {
 			if sprite.sprite != nil && sprite.sprite[i][j] > 0 {
 				colorId := palette[paletteId*4+sprite.sprite[i][j]+0x10]
 				color := COLORS[colorId]
-				index := (x + y*0x100)
-				//println(index, colorId, len(R.frameBuffer))
+				index := (x + y*0x100) * 4
 				R.frameBuffer[index] = color[0]
 				R.frameBuffer[index+1] = color[1]
 				R.frameBuffer[index+2] = color[2]

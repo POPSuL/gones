@@ -56,7 +56,6 @@ func (C *Cpu) Fetch(addr uint, asWord bool) uint {
 
 func (C *Cpu) Read(addr uint, asWord bool) uint {
 	addr &= 0xFFFF
-	//fmt.Printf("aswrd: %t\n", asWord)
 	if asWord {
 		return uint(C.bus.ReadByCpu(addr)) | (uint(C.bus.ReadByCpu(addr+1)) << 8)
 	}
@@ -700,12 +699,6 @@ func (C *Cpu) Run() uint {
 	ocp := OpCodes[opcode]
 	data := C.getAddrOrDataWithAdditionalCycle(ocp.Addressing)
 	C.execOpCode(opcode, data)
-	//fmt.Printf(
-	//	"%d+%d+%d=%d\n",
-	//	ocp.Cycle,
-	//	data.additionalCycle,
-	//	B2i(C.hasBranched),
-	//	ocp.Cycle + data.additionalCycle + B2i(C.hasBranched))
 	return ocp.Cycle + data.additionalCycle + B2i(C.hasBranched)
 }
 
