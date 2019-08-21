@@ -7,7 +7,7 @@ import (
 	"github.com/popsul/gones/interrupts"
 )
 
-const cpuClock = 1789772.5
+const CpuClock = 1789772
 
 var instrNumber = 0
 

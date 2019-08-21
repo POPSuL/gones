@@ -60,20 +60,20 @@ func NewNes(rom *reader.NesRom) *Nes {
 	return nes
 }
 
-func (N *Nes) Frame() {
-	for true {
+func (N *Nes) Frame(deadline float64) {
+	allowedCycles := deadline / 1000 / 1000 / 1000 * cpu.CpuClock
+	for allowedCycles > 0 {
 		var cycle uint = 0
 		if N.dma.IsDmaProcessing() {
 			N.dma.Run()
 			cycle = 514
 		}
-		cycle += N.cpu.Run()
+		cpuCycles := N.cpu.Run()
+		allowedCycles -= float64(cpuCycles)
+		cycle += cpuCycles
 		renderingData := N.ppu.Run(cycle * 3)
 		if renderingData != nil {
-			//fmt.Printf("RenderingData is not nil!\n")
-			//	N.cpu.bus->keypad->fetch();
 			N.renderer.Render(renderingData)
-			time.Sleep(5 * time.Millisecond)
 			break
 		}
 	}
@@ -89,10 +89,11 @@ func main() {
 
 	rom := reader.ReadRom(nesFile)
 	nes := NewNes(rom)
-	//nes.Dump()
-	//return
+	timestamp := time.Now().UnixNano()
 	for true {
-		nes.Frame()
+		now := time.Now().UnixNano()
+		nes.Frame(float64(now - timestamp))
+		timestamp = now
 		runtime.Gosched()
 	}
 }
