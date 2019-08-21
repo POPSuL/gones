@@ -2,12 +2,8 @@ package ppu
 
 import (
 	"fmt"
-	"fyne.io/fyne"
-	"fyne.io/fyne/app"
-	"fyne.io/fyne/canvas"
 	"github.com/popsul/gones/bus"
 	"github.com/veandco/go-sdl2/sdl"
-	"github.com/veandco/go-sdl2/ttf"
 	"image"
 	"image/color"
 	"image/png"
@@ -26,13 +22,7 @@ type PngDrawer struct {
 	frame uint
 }
 
-type FyneDrawer struct {
-	root   fyne.Window
-	raster *canvas.Raster
-}
-
 type SDLDrawer struct {
-	renderer   sdl.Renderer
 	window     *sdl.Window
 	surface    *sdl.Surface
 	controller *sdl.GameController
@@ -50,7 +40,7 @@ func (D *PngDrawer) Draw(buffer []uint8) {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			index := uint((x + (y * 0x100)) * 4)
+			index := (x + (y * 0x100)) * 4
 			img.Set(x, y, color.RGBA{
 				R: buffer[index],
 				G: buffer[index+1],
@@ -76,37 +66,10 @@ func (D *PngDrawer) Draw(buffer []uint8) {
 	}
 }
 
-func NewFyneDrawer() *FyneDrawer {
-	//parentDrawer := NewPngDrawer()
-	app := app.New()
-	root := app.NewWindow("Gones")
-	r := canvas.NewRaster(func(w, h int) image.Image {
-
-		println("sdfsdf")
-		return image.NewRGBA(image.Rect(0, 0, 256, 224))
-	})
-
-	root.SetContent(r)
-
-	go root.ShowAndRun()
-
-	return &FyneDrawer{
-		root,
-		r,
-	}
-}
-
-func (D *FyneDrawer) Draw(buffer []uint8) {
-
-	//println("saaaaaa")
-	//D.root.Canvas().Refresh(nil)
-}
-
 func NewSDLDrawer(keypad *bus.Keypad) *SDLDrawer {
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		panic(err)
 	}
-	ttf.Init()
 	window, err := sdl.CreateWindow("test", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED,
 		width*2, height*2, sdl.WINDOW_SHOWN)
 	if err != nil {
@@ -116,13 +79,13 @@ func NewSDLDrawer(keypad *bus.Keypad) *SDLDrawer {
 	if err != nil {
 		panic(err)
 	}
-	//surface.FillRect(nil, 0)
+
+	surface.Format.Format = sdl.PIXELFORMAT_RGB888
+
 	rect := sdl.Rect{W: width * 2, H: height * 2}
 	surface.FillRect(&rect, 0xff000000)
 	surface.SetClipRect(&rect)
 	window.UpdateSurface()
-
-	rdr, _ := sdl.CreateRenderer(window, -1, sdl.RENDERER_ACCELERATED)
 
 	var controller *sdl.GameController = nil
 	for i := 0; i < sdl.NumJoysticks(); i++ {
@@ -136,7 +99,6 @@ func NewSDLDrawer(keypad *bus.Keypad) *SDLDrawer {
 	}
 
 	return &SDLDrawer{
-		*rdr,
 		window,
 		surface,
 		controller,
@@ -146,41 +108,27 @@ func NewSDLDrawer(keypad *bus.Keypad) *SDLDrawer {
 }
 
 func (D *SDLDrawer) Draw(buffer []byte) {
+	buff := D.surface.Pixels()
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			index := uint((x + (y * 0x100)) * 4)
-			D.surface.Set(x*2, y*2, color.RGBA{
-				R: buffer[index],
-				G: buffer[index+1],
-				B: buffer[index+2],
-				A: 0xff,
-			})
-			D.surface.Set(x*2+1, y*2, color.RGBA{
-				R: buffer[index],
-				G: buffer[index+1],
-				B: buffer[index+2],
-				A: 0xff,
-			})
-			D.surface.Set(x*2, y*2+1, color.RGBA{
-				R: buffer[index],
-				G: buffer[index+1],
-				B: buffer[index+2],
-				A: 0xff,
-			})
-			D.surface.Set(x*2+1, y*2+1, color.RGBA{
-				R: buffer[index],
-				G: buffer[index+1],
-				B: buffer[index+2],
-				A: 0xff,
-			})
+			index := (x + (y * 0x100)) * 4
+			for xShift := 0; xShift < 2; xShift++ {
+				for yShift := 0; yShift < 2; yShift++ {
+					i := int32(y*2+yShift)*D.surface.Pitch + int32(x*2+xShift)*int32(D.surface.Format.BytesPerPixel)
+					buff[i+2] = buffer[index+0]
+					buff[i+1] = buffer[index+1]
+					buff[i+0] = buffer[index+2]
+				}
+			}
 		}
 	}
 
 	D.frame++
 
-	//println(D.frame)
-
-	D.window.UpdateSurface()
+	err := D.window.UpdateSurface()
+	if err != nil {
+		panic(err)
+	}
 
 	for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
 		if event.GetType() == sdl.QUIT {
