@@ -62,12 +62,8 @@ func (CB *CpuBus) ReadByCpu(addr uint) byte {
 }
 
 func (CB *CpuBus) WriteByCpu(addr uint, data byte) {
-	if addr < 0x0800 {
-		// RAM
-		CB.ram.Write(addr, data)
-	} else if addr < 0x2000 {
-		// mirror
-		CB.ram.Write(addr-0x0800, data)
+	if addr < 0x2000 {
+		CB.ram.Write(addr%0x0800, data)
 	} else if addr < 0x2008 {
 		// PPU
 		CB.ppu.Write(addr-0x2000, data)
