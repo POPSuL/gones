@@ -30,11 +30,9 @@ func NewCpuBus(ram *bus.Ram, prgRom *bus.Rom, ppu *ppu.Ppu, apu *apu.Apu, keypad
 
 func (CB *CpuBus) ReadByCpu(addr uint) byte {
 	var data byte = 0
-	if addr < 0x0800 {
-		data = CB.ram.Read(addr)
-	} else if addr < 0x2000 {
+	if addr < 0x2000 {
 		// mirror
-		data = CB.ram.Read(addr - 0x0800)
+		data = CB.ram.Read(addr % 0x0800)
 	} else if addr < 0x4000 {
 		// mirror
 		data = CB.ppu.Read((addr - 0x2000) % 8)

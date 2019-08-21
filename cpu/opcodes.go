@@ -193,6 +193,7 @@ var OpCodes = map[uint]OpCode{
 	0x42: {"NOP", "NOP", Implied, Cycles[0x42]},
 	0x52: {"NOP", "NOP", Implied, Cycles[0x52]},
 	0x62: {"NOP", "NOP", Implied, Cycles[0x62]},
+	0x6B: {"NOP", "NOP", Implied, Cycles[0x62]}, //ARR
 	0x72: {"NOP", "NOP", Implied, Cycles[0x72]},
 	0x92: {"NOP", "NOP", Implied, Cycles[0x92]},
 	0xB2: {"NOP", "NOP", Implied, Cycles[0xB2]},
@@ -202,6 +203,8 @@ var OpCodes = map[uint]OpCode{
 	0x82: {"NOPD", "NOPD", Implied, Cycles[0x82]},
 	0x89: {"NOPD", "NOPD", Implied, Cycles[0x89]},
 	0xC2: {"NOPD", "NOPD", Implied, Cycles[0xC2]},
+	0xCB: {"NOP", "NOP", Implied, Cycles[0xCB]}, //ASX
+	0x9F: {"NOP", "NOP", Implied, Cycles[0x9F]}, //AHX
 	0xE2: {"NOPD", "NOPD", Implied, Cycles[0xE2]},
 	0x04: {"NOPD", "NOPD", Implied, Cycles[0x04]},
 	0x44: {"NOPD", "NOPD", Implied, Cycles[0x44]},

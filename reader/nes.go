@@ -54,6 +54,9 @@ func ReadRom(file string) *NesRom {
 
 	rom.Program = buffer[NES_HEADER_SIZE:characterRomStart]
 	rom.Character = buffer[characterRomStart : characterRomStart+(characterRomEnd-characterRomStart)]
+	if len(rom.Character) == 0 {
+		rom.Character = make([]byte, 0xff)
+	}
 
 	fmt.Printf(
 		"Program   ROM: 0x0000 - 0x%x (%d bytes)\n",
