@@ -1,6 +1,7 @@
 package cpu
 
 import (
+	"github.com/popsul/gones/apu"
 	"github.com/popsul/gones/bus"
 	"github.com/popsul/gones/ppu"
 )
@@ -13,7 +14,7 @@ type CpuBus struct {
 	keypad     *bus.Keypad
 }
 
-func NewCpuBus(ram *bus.Ram, prgRom *bus.Rom, ppu *ppu.Ppu, keypad *bus.Keypad, dma *Dma) *CpuBus {
+func NewCpuBus(ram *bus.Ram, prgRom *bus.Rom, ppu *ppu.Ppu, alu *apu.Apu, keypad *bus.Keypad, dma *Dma) *CpuBus {
 	cb := new(CpuBus)
 	cb.ram = ram
 	cb.programRom = prgRom
@@ -70,6 +71,8 @@ func (CB *CpuBus) WriteByCpu(addr uint, data byte) {
 		} else if addr == 0x4016 {
 			// TODO Add 2P
 			CB.keypad.Write(data)
+		} else {
+			//CB.apu.Write(addr-0x4000, data)
 		}
 	}
 }

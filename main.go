@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/popsul/gones/apu"
 	"github.com/popsul/gones/bus"
 	"github.com/popsul/gones/cpu"
 	"github.com/popsul/gones/interrupts"
@@ -44,7 +45,9 @@ func NewNes(rom *reader.NesRom) *Nes {
 	nes.ppu = ppu.NewPpu(nes.ppuBus, nes.interrupts, rom.HorizontalMirror)
 	nes.dma = cpu.NewDma(nes.ram, nes.ppu)
 
-	nes.cpuBus = cpu.NewCpuBus(nes.ram, nes.programPom, nes.ppu, nes.keypad, nes.dma)
+	a := apu.NewApu()
+
+	nes.cpuBus = cpu.NewCpuBus(nes.ram, nes.programPom, nes.ppu, a, nes.keypad, nes.dma)
 	nes.cpu = cpu.NewCpu(nes.cpuBus, nes.interrupts)
 	nes.cpu.Reset()
 
