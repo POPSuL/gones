@@ -9,6 +9,7 @@ import (
 	"github.com/popsul/gones/reader"
 	"os"
 	"runtime"
+	"time"
 )
 
 type Nes struct {
@@ -23,7 +24,9 @@ type Nes struct {
 	ppuBus       *bus.PpuBus
 	characterMem *bus.Ram
 	programPom   *bus.Rom
-	keypad       *bus.Keypad
+	keypad1      *bus.Keypad
+	keypad2      *bus.Keypad
+	apu          *apu.Apu
 
 	renderer *ppu.Renderer
 }
@@ -31,7 +34,8 @@ type Nes struct {
 func NewNes(rom *reader.NesRom) *Nes {
 	nes := new(Nes)
 
-	nes.keypad = bus.NewKeypad()
+	nes.keypad1 = bus.NewKeypad()
+	nes.keypad2 = bus.NewKeypad()
 	nes.ram = bus.NewRam(2048)
 
 	nes.characterMem = bus.NewRam(0x4000)
@@ -45,13 +49,13 @@ func NewNes(rom *reader.NesRom) *Nes {
 	nes.ppu = ppu.NewPpu(nes.ppuBus, nes.interrupts, rom.HorizontalMirror)
 	nes.dma = cpu.NewDma(nes.ram, nes.ppu)
 
-	a := apu.NewApu()
+	nes.apu = apu.NewApu()
 
-	nes.cpuBus = cpu.NewCpuBus(nes.ram, nes.programPom, nes.ppu, a, nes.keypad, nes.dma)
+	nes.cpuBus = cpu.NewCpuBus(nes.ram, nes.programPom, nes.ppu, nes.apu, nes.keypad1, nes.keypad2, nes.dma)
 	nes.cpu = cpu.NewCpu(nes.cpuBus, nes.interrupts)
 	nes.cpu.Reset()
 
-	nes.renderer = ppu.NewRenderer(nes.keypad)
+	nes.renderer = ppu.NewRenderer(nes.keypad1)
 
 	return nes
 }
@@ -69,6 +73,7 @@ func (N *Nes) Frame() {
 			//fmt.Printf("RenderingData is not nil!\n")
 			//	N.cpu.bus->keypad->fetch();
 			N.renderer.Render(renderingData)
+			time.Sleep(5 * time.Millisecond)
 			break
 		}
 	}

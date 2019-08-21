@@ -11,16 +11,20 @@ type CpuBus struct {
 	programRom *bus.Rom
 	ppu        *ppu.Ppu
 	dma        *Dma
-	keypad     *bus.Keypad
+	keypad1    *bus.Keypad
+	keypad2    *bus.Keypad
+	apu        *apu.Apu
 }
 
-func NewCpuBus(ram *bus.Ram, prgRom *bus.Rom, ppu *ppu.Ppu, alu *apu.Apu, keypad *bus.Keypad, dma *Dma) *CpuBus {
+func NewCpuBus(ram *bus.Ram, prgRom *bus.Rom, ppu *ppu.Ppu, apu *apu.Apu, keypad1 *bus.Keypad, keypad2 *bus.Keypad, dma *Dma) *CpuBus {
 	cb := new(CpuBus)
 	cb.ram = ram
 	cb.programRom = prgRom
 	cb.ppu = ppu
 	cb.dma = dma
-	cb.keypad = keypad
+	cb.keypad1 = keypad1
+	cb.keypad2 = keypad2
+	cb.apu = apu
 	return cb
 }
 
@@ -35,11 +39,13 @@ func (CB *CpuBus) ReadByCpu(addr uint) byte {
 		// mirror
 		data = CB.ppu.Read((addr - 0x2000) % 8)
 	} else if addr == 0x4016 {
-		// TODO Add 2P
-		if CB.keypad.Read() {
+		if CB.keypad1.Read() {
 			data = 1
 		}
-		data = 0
+	} else if addr == 0x4017 {
+		if CB.keypad2.Read() {
+			data = 1
+		}
 	} else if addr >= 0xC000 {
 		// Mirror, if prom block number equals 1
 		if CB.programRom.Size() <= 0x4000 {
@@ -69,10 +75,11 @@ func (CB *CpuBus) WriteByCpu(addr uint, data byte) {
 		if addr == 0x4014 {
 			CB.dma.Write(data)
 		} else if addr == 0x4016 {
-			// TODO Add 2P
-			CB.keypad.Write(data)
+			CB.keypad1.Write(data)
+		} else if addr == 0x4017 {
+			CB.keypad2.Write(data)
 		} else {
-			//CB.apu.Write(addr-0x4000, data)
+			CB.apu.Write(addr-0x4000, data)
 		}
 	}
 }

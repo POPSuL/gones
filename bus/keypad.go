@@ -33,6 +33,9 @@ func (K *Keypad) Read() bool {
 	//K.DumpBuffer()
 	k := K.keyRegisters[K.index]
 	K.index++
+	if K.index >= uint(len(K.keyRegisters)) {
+		K.index = 0
+	}
 	return k
 }
 
@@ -54,6 +57,6 @@ func (K *Keypad) KeyDown(key uint) {
 
 func (K *Keypad) KeyUp(key uint) {
 	if key < 0x08 {
-		//K.keyRegisters[key] = false
+		K.keyRegisters[key] = false
 	}
 }

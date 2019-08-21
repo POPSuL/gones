@@ -8,7 +8,7 @@ type Apu struct {
 
 func NewApu() *Apu {
 	return &Apu{
-		ram: *bus.NewRam(0x0f),
+		ram: *bus.NewRam(0x1f),
 	}
 }
 
