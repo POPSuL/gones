@@ -8,7 +8,6 @@ import (
 	"github.com/popsul/gones/ppu"
 	"github.com/popsul/gones/reader"
 	"os"
-	"runtime"
 	"time"
 )
 
@@ -94,6 +93,6 @@ func main() {
 		now := time.Now().UnixNano()
 		nes.Frame(float64(now - timestamp))
 		timestamp = now
-		runtime.Gosched()
+		//runtime.Gosched()
 	}
 }

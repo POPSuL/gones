@@ -19,10 +19,10 @@ type Cpu struct {
 }
 
 type AddrOrDataAndAdditionalCycle struct {
-	addrOrData, additionalCycle uint
+	addrOrData, additionalCycle uint16
 }
 
-func newAddrOrDataAndAdditionalCycle(addrOrData uint, additionalCycle uint) AddrOrDataAndAdditionalCycle {
+func newAddrOrDataAndAdditionalCycle(addrOrData uint16, additionalCycle uint16) AddrOrDataAndAdditionalCycle {
 	return AddrOrDataAndAdditionalCycle{
 		addrOrData,
 		additionalCycle,
@@ -41,28 +41,36 @@ func NewCpu(bus *CpuBus, interrupts *interrupts.Interrupts) *Cpu {
 func (C *Cpu) Reset() {
 	C.registers = NewRegisters()
 	// TODO: flownes set 0x8000 to PC when read(0xfffc) fails.
-	C.registers.PC = uint(C.Read(0xfffc, true))
+	C.registers.PC = uint16(C.Read(0xfffc, true))
 	fmt.Printf("Initial pc: %04x\n", C.registers.PC)
 }
 
-func (C *Cpu) Fetch(addr uint, asWord bool) uint {
-	if asWord {
-		C.registers.PC += 2
-	} else {
-		C.registers.PC += 1
-	}
-	return C.Read(addr, asWord)
+func (C *Cpu) Fetch(addr uint16) byte {
+	C.registers.PC += 1
+	return C.Read(addr)
 }
 
-func (C *Cpu) Read(addr uint, asWord bool) uint {
+func (C *Cpu) FetchAddr(addr uint16) uint16 {
+	C.registers.PC += 1
+	return uint16(C.Read(addr))
+}
+
+func (C *Cpu) FetchWord(addr uint16) uint16 {
+	C.registers.PC += 2
+	return uint16(C.Read(addr) | C.Read(addr+1)<<8)
+}
+
+func (C *Cpu) Read(addr uint16) byte {
 	addr &= 0xFFFF
-	if asWord {
-		return uint(C.bus.ReadByCpu(addr)) | (uint(C.bus.ReadByCpu(addr+1)) << 8)
-	}
-	return uint(C.bus.ReadByCpu(addr))
+	return C.bus.ReadByCpu(addr)
 }
 
-func (C *Cpu) Write(addr uint, data byte) {
+func (C *Cpu) ReadAddr(addr uint16) uint16 {
+	addr &= 0xFFFF
+	return uint16(C.bus.ReadByCpu(addr))
+}
+
+func (C *Cpu) Write(addr uint16, data byte) {
 	C.bus.WriteByCpu(addr, data)
 }
 
@@ -71,66 +79,66 @@ func (C *Cpu) Push(data byte) {
 	C.registers.SP--
 }
 
-func (C *Cpu) Pop() uint {
+func (C *Cpu) Pop() byte {
 	C.registers.SP++
-	return C.Read(0x100|(C.registers.SP&0xFF), false)
+	return byte(C.Read(0x100 | (C.registers.SP & 0xFF)))
 }
 
-func (C *Cpu) Branch(addr uint) {
+func (C *Cpu) Branch(addr uint16) {
 	C.registers.PC = addr
 	C.hasBranched = true
 }
 
 func (C *Cpu) pushStatus() {
-	status := byte(B2i(C.registers.P.Negative)<<7 |
-		B2i(C.registers.P.Overflow)<<6 |
-		B2i(C.registers.P.Reserved)<<5 |
-		B2i(C.registers.P.BreakMode)<<4 |
-		B2i(C.registers.P.DecimalMode)<<3 |
-		B2i(C.registers.P.Interrupt)<<2 |
-		B2i(C.registers.P.Zero)<<1 |
-		B2i(C.registers.P.Carry))
+	status := byte(C.registers.P.Negative<<7 |
+		C.registers.P.Overflow<<6 |
+		C.registers.P.Reserved<<5 |
+		C.registers.P.BreakMode<<4 |
+		C.registers.P.DecimalMode<<3 |
+		C.registers.P.Interrupt<<2 |
+		C.registers.P.Zero<<1 |
+		C.registers.P.Carry)
 	C.Push(status)
 }
 
 func (C *Cpu) popStatus() {
 	status := C.Pop()
-	C.registers.P.Negative = I2b(status & 0x80)
-	C.registers.P.Overflow = I2b(status & 0x40)
-	C.registers.P.Reserved = I2b(status & 0x20)
-	C.registers.P.BreakMode = I2b(status & 0x10)
-	C.registers.P.DecimalMode = I2b(status & 0x08)
-	C.registers.P.Interrupt = I2b(status & 0x04)
-	C.registers.P.Zero = I2b(status & 0x02)
-	C.registers.P.Carry = I2b(status & 0x01)
+	C.registers.P.Negative = status & 0x80
+	C.registers.P.Overflow = status & 0x40
+	C.registers.P.Reserved = status & 0x20
+	C.registers.P.BreakMode = status & 0x10
+	C.registers.P.DecimalMode = status & 0x08
+	C.registers.P.Interrupt = status & 0x04
+	C.registers.P.Zero = status & 0x02
+	C.registers.P.Carry = status & 0x01
 }
 
 func (C *Cpu) PopPC() {
-	C.registers.PC = C.Pop()
-	C.registers.PC += C.Pop() << 8
+	C.registers.PC = uint16(C.Pop())
+	C.registers.PC += uint16(C.Pop()) << 8
 }
 
 func (C *Cpu) ProcessNmi() {
 	C.interrupts.ReleaseNmi()
-	C.registers.P.BreakMode = false
+	C.registers.P.BreakMode = 0x00
 	C.Push(byte((C.registers.PC >> 8) & 0xFF))
 	C.Push(byte(C.registers.PC & 0xFF))
 	C.pushStatus()
-	C.registers.P.Interrupt = true
-	C.registers.PC = C.Read(0xFFFA, true)
+	C.registers.P.Interrupt = 0x01
+	C.registers.PC = uint16(C.Read(0xFFFA) | (C.Read(0xFFFA+1))<<8)
 }
 
 func (C *Cpu) processIrq() {
-	if C.registers.P.Interrupt {
+	if C.registers.P.Interrupt > 0 {
 		return
 	}
 	C.interrupts.ReleaseIrq()
-	C.registers.P.BreakMode = false
+	C.registers.P.BreakMode = 0x00
 	C.Push(byte((C.registers.PC >> 8) & 0xFF))
 	C.Push(byte(C.registers.PC & 0xFF))
 	C.pushStatus()
-	C.registers.P.Interrupt = true
-	C.registers.PC = C.Read(0xFFFE, false)
+	C.registers.P.Interrupt = 0x01
+	C.registers.PC = uint16(C.Read(0xFFFE))
 }
 
 func (C *Cpu) getAddrOrDataWithAdditionalCycle(mode Addressing) AddrOrDataAndAdditionalCycle {
@@ -140,10 +148,10 @@ func (C *Cpu) getAddrOrDataWithAdditionalCycle(mode Addressing) AddrOrDataAndAdd
 	case Implied:
 		return newAddrOrDataAndAdditionalCycle(0x00, 0)
 	case Immediate:
-		return newAddrOrDataAndAdditionalCycle(C.Fetch(C.registers.PC, false), 0)
+		return newAddrOrDataAndAdditionalCycle(uint16(C.Fetch(C.registers.PC)), 0)
 	case Relative:
-		baseAddr := C.Fetch(C.registers.PC, false)
-		var addr uint
+		baseAddr := uint16(C.Fetch(C.registers.PC))
+		var addr uint16
 		if baseAddr < 0x80 {
 			addr = baseAddr + C.registers.PC
 		} else {
@@ -154,45 +162,45 @@ func (C *Cpu) getAddrOrDataWithAdditionalCycle(mode Addressing) AddrOrDataAndAdd
 			B2i((addr&0xff00) != (C.registers.PC&0xFF00)),
 		)
 	case ZeroPage:
-		return newAddrOrDataAndAdditionalCycle(C.Fetch(C.registers.PC, false), 0)
+		return newAddrOrDataAndAdditionalCycle(uint16(C.Fetch(C.registers.PC)), 0)
 	case ZeroPageX:
-		addr := C.Fetch(C.registers.PC, false)
+		addr := C.Fetch(C.registers.PC)
 		return newAddrOrDataAndAdditionalCycle(
-			(addr+C.registers.X)&0xff,
+			(uint16(addr)+C.registers.X)&0xff,
 			0,
 		)
 	case ZeroPageY:
-		addr := C.Fetch(C.registers.PC, false)
-		return newAddrOrDataAndAdditionalCycle(addr+C.registers.Y&0xff, 0)
+		addr := C.Fetch(C.registers.PC)
+		return newAddrOrDataAndAdditionalCycle(uint16(addr)+C.registers.Y&0xff, 0)
 	case Absolute:
-		return newAddrOrDataAndAdditionalCycle(C.Fetch(C.registers.PC, true), 0)
+		return newAddrOrDataAndAdditionalCycle(C.FetchWord(C.registers.PC), 0)
 	case AbsoluteX:
-		addr := C.Fetch(C.registers.PC, true)
+		addr := C.FetchWord(C.registers.PC)
 		additionalCycle := B2i((addr & 0xFF00) != ((addr + C.registers.X) & 0xFF00))
 		return newAddrOrDataAndAdditionalCycle((addr+C.registers.X)&0xFFFF, additionalCycle)
 	case AbsoluteY:
-		addr := C.Fetch(C.registers.PC, true)
+		addr := C.FetchWord(C.registers.PC)
 		additionalCycle := B2i((addr & 0xFF00) != ((addr + C.registers.Y) & 0xFF00))
 		return newAddrOrDataAndAdditionalCycle((addr+C.registers.Y)&0xFFFF, additionalCycle)
 	case PreIndexedIndirect:
-		baseAddr := (C.Fetch(C.registers.PC, false) + C.registers.X) & 0xFF
-		addr := C.Read(baseAddr, false) + (C.Read((baseAddr+1)&0xFF, false) << 8)
+		baseAddr := (C.FetchAddr(C.registers.PC) + C.registers.X) & 0xFF
+		addr := uint16(C.Read(baseAddr) + (C.Read((baseAddr+1)&0xFF) << 8))
 		return newAddrOrDataAndAdditionalCycle(
 			addr&0xFFFF,
 			B2i((addr&0xFF00) != (baseAddr&0xFF00)),
 		)
 	case PostIndexedIndirect:
-		addrOrData := C.Fetch(C.registers.PC, false)
-		baseAddr := C.Read(addrOrData, false) + (C.Read((addrOrData+1)&0xFF, false) << 8)
+		addrOrData := C.FetchAddr(C.registers.PC)
+		baseAddr := C.ReadAddr(addrOrData) + (C.ReadAddr((addrOrData+1)&0xFF) << 8)
 		addr := baseAddr + C.registers.Y
 		return newAddrOrDataAndAdditionalCycle(
 			addr&0xFFFF,
 			B2i((addr&0xFF00) != (baseAddr&0xFF00)),
 		)
 	case IndirectAbsolute:
-		addrOrData := C.Fetch(C.registers.PC, true)
-		addr := C.Read(addrOrData, false) +
-			(C.Read((addrOrData&0xFF00)|(((addrOrData&0xFF)+1)&0xFF), false) << 8)
+		addrOrData := C.FetchWord(C.registers.PC)
+		addr := C.ReadAddr(addrOrData) +
+			(C.ReadAddr((addrOrData&0xFF00)|(((addrOrData&0xFF)+1)&0xFF)) << 8)
 		return newAddrOrDataAndAdditionalCycle(addr&0xFFFF, 0)
 	default:
 		fmt.Printf("Mode: %d\n", mode)
@@ -203,14 +211,14 @@ func (C *Cpu) getAddrOrDataWithAdditionalCycle(mode Addressing) AddrOrDataAndAdd
 func (C *Cpu) dumpRegisters() {
 	fmt.Printf(
 		"R: 0b%d%d%d%d%d%d%d%d SP: 0x%04x PC: 0x%04x A: 0x%02x X: 0x%02x Y: 0x%02x\n",
-		B2i(C.registers.P.DecimalMode),
-		B2i(C.registers.P.Zero),
-		B2i(C.registers.P.Negative),
-		B2i(C.registers.P.Interrupt),
-		B2i(C.registers.P.BreakMode),
-		B2i(C.registers.P.Carry),
-		B2i(C.registers.P.Overflow),
-		B2i(C.registers.P.Reserved),
+		C.registers.P.DecimalMode,
+		C.registers.P.Zero,
+		C.registers.P.Negative,
+		C.registers.P.Interrupt,
+		C.registers.P.BreakMode,
+		C.registers.P.Carry,
+		C.registers.P.Overflow,
+		C.registers.P.Reserved,
 		C.registers.SP,
 		C.registers.PC,
 		C.registers.A,
@@ -240,11 +248,11 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 	var tmpData uint
 	switch opInfo.BaseName {
 	case "LDA":
-		data := C.Read(addrOrData, false)
+		data := C.ReadAddr(addrOrData)
 		C.registers.A = B2ix(mode == Immediate, addrOrData, data)
 		//fmt.Printf("LDA 0x%04x 0x%04x 0x%04x\n", addrOrData, C.registers.A, data)
-		C.registers.P.Negative = I2b(C.registers.A & 0x80)
-		C.registers.P.Zero = !I2b(C.registers.A)
+		C.registers.P.Negative = byte(C.registers.A) & 0x80
+		C.registers.P.Zero = byte(C.registers.A) & 0xff
 		break
 	case "LDX":
 		if mode == Immediate {
@@ -683,7 +691,7 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 		C.Write(addrOrData, byte(data))
 		break
 	default:
-		panic(errors.New(fmt.Sprintf("Unknown  opcode %d (%s detected)\n", op, opInfo.BaseName)))
+		panic(errors.New(fmt.Sprintf("Unknown  opcode 0x%02x (%d) (%s detected)\n", op, op, opInfo.BaseName)))
 	}
 }
 

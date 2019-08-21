@@ -12,6 +12,6 @@ func NewApu() *Apu {
 	}
 }
 
-func (A *Apu) Write(addr uint, data byte) {
+func (A *Apu) Write(addr uint16, data byte) {
 	A.ram.Write(addr, data)
 }

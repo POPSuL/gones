@@ -3,33 +3,31 @@ package bus
 import "fmt"
 
 type Ram struct {
-	size uint
+	size uint16
 	data []byte
 }
 
-func NewRam(size uint) *Ram {
-	ram := new(Ram)
-	ram.size = size
-	ram.Reset()
-	return ram
+func NewRam(size uint16) *Ram {
+	return &Ram{
+		size: size,
+		data: make([]byte, size),
+	}
 }
 
-func (R *Ram) Reset() {
-	R.data = make([]byte, R.size)
+func (R *Ram) Write(addr uint16, val byte) {
+	R.data[addr] = val
 }
 
-func (R *Ram) Write(addr uint, val byte) {
-	R.data[addr] = byte(val)
-}
-
-func (R *Ram) Read(addr uint) byte {
+func (R *Ram) Read(addr uint16) byte {
 	return R.data[addr]
 }
+
 func (R *Ram) Fill(bytes []byte) {
+	println("Fill", len(bytes))
 	R.data = bytes
 }
 
-func (R *Ram) Size() uint {
+func (R *Ram) Size() uint16 {
 	return R.size
 }
 

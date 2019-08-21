@@ -10,10 +10,10 @@ func NewPpuBus(ram *Ram) *PpuBus {
 	return ppuBus
 }
 
-func (p *PpuBus) ReadByPpu(addr uint) byte {
+func (p *PpuBus) ReadByPpu(addr uint16) byte {
 	return p.ram.Read(addr)
 }
 
-func (p *PpuBus) WriteByPpu(addr uint, value byte) {
+func (p *PpuBus) WriteByPpu(addr uint16, value byte) {
 	p.ram.Write(addr, value)
 }

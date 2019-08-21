@@ -28,13 +28,10 @@ func NewCpuBus(ram *bus.Ram, prgRom *bus.Rom, ppu *ppu.Ppu, apu *apu.Apu, keypad
 	return cb
 }
 
-func (CB *CpuBus) ReadByCpu(addr uint) byte {
+func (CB *CpuBus) ReadByCpu(addr uint16) byte {
 	var data byte = 0
-	if addr < 0x0800 {
-		data = CB.ram.Read(addr)
-	} else if addr < 0x2000 {
-		// mirror
-		data = CB.ram.Read(addr - 0x0800)
+	if addr < 0x2000 {
+		data = CB.ram.Read(addr & 0x0800)
 	} else if addr < 0x4000 {
 		// mirror
 		data = CB.ppu.Read((addr - 0x2000) % 8)
@@ -61,7 +58,7 @@ func (CB *CpuBus) ReadByCpu(addr uint) byte {
 	return data
 }
 
-func (CB *CpuBus) WriteByCpu(addr uint, data byte) {
+func (CB *CpuBus) WriteByCpu(addr uint16, data byte) {
 	if addr < 0x2000 {
 		CB.ram.Write(addr%0x0800, data)
 	} else if addr < 0x2008 {

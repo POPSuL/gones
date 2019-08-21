@@ -193,6 +193,7 @@ var OpCodes = map[uint]OpCode{
 	0x42: {"NOP", "NOP", Implied, Cycles[0x42]},
 	0x52: {"NOP", "NOP", Implied, Cycles[0x52]},
 	0x62: {"NOP", "NOP", Implied, Cycles[0x62]},
+	0x6B: {"NOP", "NOP", Implied, Cycles[0x6B]}, //ARR
 	0x72: {"NOP", "NOP", Implied, Cycles[0x72]},
 	0x92: {"NOP", "NOP", Implied, Cycles[0x92]},
 	0xB2: {"NOP", "NOP", Implied, Cycles[0xB2]},

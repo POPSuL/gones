@@ -43,17 +43,20 @@ func ReadRom(file string) *NesRom {
 	rom.HorizontalMirror = uint(buffer[6])&0x01 != 1
 	rom.Mapper = (uint(buffer[6])&0xf0)>>4 | (uint(buffer[7]) & 0xf0)
 
-	fmt.Printf("Program ROM pages: %d\n", rom.ProgramRomPages)
-	fmt.Printf("Character ROM pages: %d\n", rom.CharacterRomPages)
-	fmt.Printf("Mapper: %d\n", rom.Mapper)
+	fmt.Printf("Program ROM pages: 0x%04x\n", rom.ProgramRomPages)
+	fmt.Printf("Character ROM pages: 0x%04x\n", buffer[5])
+	fmt.Printf("Mapper: 0x%02x\n", rom.Mapper)
 
 	characterRomStart := NES_HEADER_SIZE + rom.ProgramRomPages*PROGRAM_ROM_SIZE
 	characterRomEnd := characterRomStart + rom.CharacterRomPages*CHARACTER_ROM_SIZE
-	fmt.Printf("Character ROM start: 0x%x (%d)\n", characterRomStart, characterRomStart)
-	fmt.Printf("Character ROM end: 0x%x (%d)\n", characterRomEnd, characterRomEnd)
+	fmt.Printf("Character ROM start: 0x%04x (%d)\n", characterRomStart, characterRomStart)
+	fmt.Printf("Character ROM end: 0x%04x (%d)\n", characterRomEnd, characterRomEnd)
 
 	rom.Program = buffer[NES_HEADER_SIZE:characterRomStart]
 	rom.Character = buffer[characterRomStart : characterRomStart+(characterRomEnd-characterRomStart)]
+	if len(rom.Character) == 0 {
+		rom.Character = make([]byte, 0xff)
+	}
 
 	fmt.Printf(
 		"Program   ROM: 0x0000 - 0x%x (%d bytes)\n",

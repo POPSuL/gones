@@ -71,9 +71,9 @@ type Ppu struct {
 	/** @var bool */
 	isLowerVramAddr bool
 	/** @var int */
-	spriteRamAddr uint
+	spriteRamAddr uint16
 	/** @var int */
-	vramAddr uint
+	vramAddr uint16
 	/** @var \Nes\Bus\Ram */
 	vram bus.Ram
 	/** @var int */
@@ -139,14 +139,14 @@ func NewRenderingData(palette []byte, background []Tile, sprites []SpriteWithAtt
 	}
 }
 
-func (P *Ppu) ReadCharacterRAM(addr uint) byte {
+func (P *Ppu) ReadCharacterRAM(addr uint16) byte {
 	return P.bus.ReadByPpu(addr)
 }
-func (P *Ppu) WriteCharacterRAM(addr uint, data byte) {
+func (P *Ppu) WriteCharacterRAM(addr uint16, data byte) {
 	P.bus.WriteByPpu(addr, data)
 }
 
-func (P *Ppu) vramOffset() uint {
+func (P *Ppu) vramOffset() uint16 {
 	if (P.registers[0x00] & 0x04) > 0 {
 		return 32
 	}
@@ -169,7 +169,7 @@ func (P *Ppu) ReadVram() byte {
 	return buf
 }
 
-func (P *Ppu) Read(addr uint) byte {
+func (P *Ppu) Read(addr uint16) byte {
 	var data byte = 0
 	/*
 		| bit  | description                                 |
@@ -198,7 +198,7 @@ func (P *Ppu) Read(addr uint) byte {
 	return data
 }
 
-func (P *Ppu) Write(addr uint, data byte) {
+func (P *Ppu) Write(addr uint16, data byte) {
 	if addr == 0x0003 {
 		P.writeSpriteRamAddr(data)
 	}
@@ -218,7 +218,7 @@ func (P *Ppu) Write(addr uint, data byte) {
 }
 
 func (P *Ppu) writeSpriteRamAddr(data byte) {
-	P.spriteRamAddr = uint(data)
+	P.spriteRamAddr = uint16(data)
 }
 
 func (P *Ppu) writeSpriteRamData(data byte) {
@@ -238,17 +238,17 @@ func (P *Ppu) writeScrollData(data byte) {
 
 func (P *Ppu) writeVramAddr(data byte) {
 	if P.isLowerVramAddr {
-		P.vramAddr += uint(data)
+		P.vramAddr += uint16(data)
 		P.isLowerVramAddr = false
 		P.isValidVramAddr = true
 	} else {
-		P.vramAddr = uint(data) << 8
+		P.vramAddr = uint16(data) << 8
 		P.isLowerVramAddr = true
 		P.isValidVramAddr = false
 	}
 }
 
-func (P *Ppu) calcVramAddr() uint {
+func (P *Ppu) calcVramAddr() uint16 {
 	if P.vramAddr >= 0x3000 && P.vramAddr < 0x3f00 {
 		P.vramAddr -= 0x3000
 		return P.vramAddr
@@ -270,7 +270,7 @@ func (P *Ppu) writeVramData(data byte) {
 	P.vramAddr += P.vramOffset()
 }
 
-func (P *Ppu) writeVram(addr uint, data byte) {
+func (P *Ppu) writeVram(addr uint16, data byte) {
 	P.vram.Write(addr, data)
 }
 
@@ -357,16 +357,16 @@ func (P *Ppu) getBlockId(tileX uint, tileY uint) uint {
 
 func (P *Ppu) getAttribute(tileX uint, tileY uint, offset uint) uint {
 	addr := ^^(tileX / 4) + (^^(tileY / 4) * 8) + 0x03C0 + offset
-	return uint(P.vram.Read(P.mirrorDownSpriteAddr(addr)))
+	return uint(P.vram.Read(P.mirrorDownSpriteAddr(uint16(addr))))
 }
 
 func (P *Ppu) getSpriteId(tileX uint, tileY uint, offset uint) uint {
 	tileNumber := tileY*32 + tileX
-	spriteAddr := P.mirrorDownSpriteAddr(tileNumber + offset)
+	spriteAddr := P.mirrorDownSpriteAddr(uint16(tileNumber + offset))
 	return uint(P.vram.Read(spriteAddr))
 }
 
-func (P *Ppu) mirrorDownSpriteAddr(addr uint) uint {
+func (P *Ppu) mirrorDownSpriteAddr(addr uint16) uint16 {
 	if !P.isHorizontalMirror {
 		return addr
 	}
@@ -379,7 +379,7 @@ func (P *Ppu) mirrorDownSpriteAddr(addr uint) uint {
 
 func (P *Ppu) buildSprites() {
 	offset := I2ix(uint(P.registers[0])&0x08, 0x1000, 0x0000)
-	for i := uint(0); i < SPRITES_NUMBER; i = i + 4 {
+	for i := uint16(0); i < SPRITES_NUMBER; i = i + 4 {
 		// INFO: Offset sprite Y position, because First and last 8line is not rendered.
 		y := int(P.spriteRam.Read(i)) - 8
 		// TODO: WTF
@@ -402,7 +402,7 @@ func (P *Ppu) buildSprite(spriteId uint, offset uint) [][]uint {
 
 	for i := uint(0); i < 16; i++ {
 		for j := uint(0); j < 8; j++ {
-			addr := spriteId*16 + i + offset
+			addr := uint16(spriteId*16 + i + offset)
 			ram := P.ReadCharacterRAM(addr)
 			if ram&(0x80>>j) > 0 {
 				sprite[i%8][j] += 0x01 << ^^(i / 8)
@@ -453,7 +453,7 @@ func (P *Ppu) TransferSprite(index uint, data byte) {
 	// after the DMA OAMADDR should be set to 0 before the end of vblank to prevent potential OAM corruption
 	// (See: Errata).
 	// However, due to OAMADDR writes also having a "corruption" effect[5] this technique is not recommended.
-	addr := index + P.spriteRamAddr
+	addr := uint16(index) + P.spriteRamAddr
 	P.spriteRam.Write(addr%0x100, data)
 }
 

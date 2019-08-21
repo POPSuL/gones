@@ -10,10 +10,10 @@ func NewRom(r []byte) *Rom {
 	return rom
 }
 
-func (R *Rom) Size() uint {
-	return uint(len(R.data))
+func (R *Rom) Size() uint16 {
+	return uint16(len(R.data))
 }
 
-func (R *Rom) Read(addr uint) byte {
+func (R *Rom) Read(addr uint16) byte {
 	return R.data[addr]
 }

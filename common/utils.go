@@ -1,13 +1,13 @@
 package common
 
-func B2i(b bool) uint {
+func B2i(b bool) uint16 {
 	if b {
 		return 1
 	}
 	return 0
 }
 
-func B2ix(b bool, true uint, false uint) uint {
+func B2ix(b bool, true uint16, false uint16) uint16 {
 	if b {
 		return true
 	}

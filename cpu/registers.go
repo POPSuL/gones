@@ -11,19 +11,19 @@ const (
 )
 
 type Registers struct {
-	A, X, Y, SP, PC uint
+	A, X, Y, SP, PC uint16
 	P               *Status
 }
 
 type Status struct {
-	Negative    bool
-	Overflow    bool
-	Reserved    bool
-	BreakMode   bool
-	DecimalMode bool
-	Interrupt   bool
-	Zero        bool
-	Carry       bool
+	Negative    byte
+	Overflow    byte
+	Reserved    byte
+	BreakMode   byte
+	DecimalMode byte
+	Interrupt   byte
+	Zero        byte
+	Carry       byte
 }
 
 func NewStatus(
