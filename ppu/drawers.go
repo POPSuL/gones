@@ -28,6 +28,7 @@ type SDLDrawer struct {
 	controller *sdl.GameController
 	frame      int64
 	keypad     *bus.Keypad
+	scale      int
 }
 
 func NewPngDrawer() *PngDrawer {
@@ -104,6 +105,7 @@ func NewSDLDrawer(keypad *bus.Keypad) *SDLDrawer {
 		controller,
 		0,
 		keypad,
+		2,
 	}
 }
 
@@ -112,9 +114,9 @@ func (D *SDLDrawer) Draw(buffer []byte) {
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			index := (x + (y * 0x100)) * 4
-			for xShift := 0; xShift < 2; xShift++ {
-				for yShift := 0; yShift < 2; yShift++ {
-					i := int32(y*2+yShift)*D.surface.Pitch + int32(x*2+xShift)*int32(D.surface.Format.BytesPerPixel)
+			for xShift := 0; xShift < D.scale; xShift++ {
+				for yShift := 0; yShift < D.scale; yShift++ {
+					i := int32(y*D.scale+yShift)*D.surface.Pitch + int32(x*D.scale+xShift)*int32(D.surface.Format.BytesPerPixel)
 					buff[i+2] = buffer[index+0]
 					buff[i+1] = buffer[index+1]
 					buff[i+0] = buffer[index+2]
@@ -163,26 +165,60 @@ func (D *SDLDrawer) Draw(buffer []byte) {
 	}
 }
 
+func (D *SDLDrawer) scaleUp() {
+	if D.scale > 5 {
+		return
+	}
+
+	D.scale++
+	D.window.SetSize(int32(width*D.scale), int32(height*D.scale))
+	s, err := D.window.GetSurface()
+	if err != nil {
+		panic(err)
+	}
+	D.surface = s
+}
+
+func (D *SDLDrawer) scaleDown() {
+	if D.scale < 2 {
+		return
+	}
+
+	D.scale--
+	D.window.SetSize(int32(width*int(D.scale)), int32(height*int(D.scale)))
+	s, err := D.window.GetSurface()
+	if err != nil {
+		panic(err)
+	}
+	D.surface = s
+}
+
 func (D *SDLDrawer) matchKey(key sdl.Keycode) uint {
 	//Maps a keyboard key to a nes key.
 	// A, B, SELECT, START, ↑, ↓, ←, →
 	switch key {
-	case sdl.K_SEMICOLON:
+	case sdl.K_l, sdl.K_x:
+		println("semi")
 		return 0
-	case sdl.K_COMMA:
+	case sdl.K_k, sdl.K_z:
+		println("comma")
 		return 1
 	case sdl.K_TAB:
 		return 2
 	case sdl.K_SPACE:
 		return 3
-	case sdl.K_w:
+	case sdl.K_w, sdl.K_UP:
 		return 4
-	case sdl.K_s:
+	case sdl.K_s, sdl.K_DOWN:
 		return 5
-	case sdl.K_a:
+	case sdl.K_a, sdl.K_LEFT:
 		return 6
-	case sdl.K_d:
+	case sdl.K_d, sdl.K_RIGHT:
 		return 7
+	case sdl.K_MINUS:
+		D.scaleDown()
+	case sdl.K_EQUALS:
+		D.scaleUp()
 	}
 	return 8
 }

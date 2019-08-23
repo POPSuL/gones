@@ -193,7 +193,8 @@ var OpCodes = map[uint]OpCode{
 	0x42: {"NOP", "NOP", Implied, Cycles[0x42]},
 	0x52: {"NOP", "NOP", Implied, Cycles[0x52]},
 	0x62: {"NOP", "NOP", Implied, Cycles[0x62]},
-	0x6B: {"NOP", "NOP", Implied, Cycles[0x62]}, //ARR
+	0x6B: {"NOP", "NOP", Implied, Cycles[0x62]},   //ARR
+	0x0B: {"NOP", "NOP", Immediate, Cycles[0x0B]}, //ANC
 	0x72: {"NOP", "NOP", Implied, Cycles[0x72]},
 	0x92: {"NOP", "NOP", Implied, Cycles[0x92]},
 	0xB2: {"NOP", "NOP", Implied, Cycles[0xB2]},
@@ -224,11 +225,16 @@ var OpCodes = map[uint]OpCode{
 	0xFC: {"NOPI", "NOPI", Implied, Cycles[0xFC]},
 	// LAX
 	0xA7: {"LAX_ZERO", "LAX", ZeroPage, Cycles[0xA7]},
+	0xAB: {"LAX_IMM", "LAX", Immediate, Cycles[0xAB]}, // !!!
 	0xB7: {"LAX_ZEROY", "LAX", ZeroPageY, Cycles[0xB7]},
 	0xAF: {"LAX_ABS", "LAX", Absolute, Cycles[0xAF]},
 	0xBF: {"LAX_ABSY", "LAX", AbsoluteY, Cycles[0xBF]},
 	0xA3: {"LAX_INDX", "LAX", PreIndexedIndirect, Cycles[0xA3]},
 	0xB3: {"LAX_INDY", "LAX", PostIndexedIndirect, Cycles[0xB3]},
+	// LAS
+	0xBB: {"NOP", "NOP", AbsoluteY, Cycles[0xBB]},
+	// SHY
+	0x9C: {"NOP", "NOP", AbsoluteY, Cycles[0x9C]},
 	// SAX
 	0x87: {"SAX_ZERO", "SAX", ZeroPage, Cycles[0x87]},
 	0x97: {"SAX_ZEROY", "SAX", ZeroPageY, Cycles[0x97]},

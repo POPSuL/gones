@@ -683,7 +683,8 @@ func (C *Cpu) execOpCode(op uint, dataInfo AddrOrDataAndAdditionalCycle) {
 		C.Write(addrOrData, byte(data))
 		break
 	default:
-		panic(errors.New(fmt.Sprintf("Unknown  opcode 0x%02x %d (%s detected)\n", op, op, opInfo.BaseName)))
+		//panic(errors.New(fmt.Sprintf("Unknown  opcode 0x%02x %d (%s detected)\n", op, op, opInfo.BaseName)))
+		println(fmt.Sprintf("Unknown  opcode 0x%02x %d (%s detected)\n", op, op, opInfo.BaseName))
 	}
 }
 
