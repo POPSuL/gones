@@ -198,10 +198,8 @@ func (D *SDLDrawer) matchKey(key sdl.Keycode) uint {
 	// A, B, SELECT, START, ↑, ↓, ←, →
 	switch key {
 	case sdl.K_l, sdl.K_x:
-		println("semi")
 		return 0
 	case sdl.K_k, sdl.K_z:
-		println("comma")
 		return 1
 	case sdl.K_TAB:
 		return 2
