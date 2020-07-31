@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/popsul/gones/apu"
 	"github.com/popsul/gones/bus"
+	"github.com/popsul/gones/common"
 	"github.com/popsul/gones/cpu"
 	"github.com/popsul/gones/interrupts"
 	"github.com/popsul/gones/ppu"
@@ -49,7 +50,7 @@ func NewNes(rom *reader.NesRom) *Nes {
 	nes.ppu = ppu.NewPpu(nes.ppuBus, nes.interrupts, rom.HorizontalMirror)
 	nes.dma = cpu.NewDma(nes.ram, nes.ppu)
 
-	nes.apu = apu.NewApu()
+	nes.apu = apu.NewApu(nes.interrupts)
 
 	nes.cpuBus = cpu.NewCpuBus(nes.ram, nes.programPom, nes.ppu, nes.apu, nes.keypad1, nes.keypad2, nes.dma)
 	nes.cpu = cpu.NewCpu(nes.cpuBus, nes.interrupts)
@@ -61,7 +62,7 @@ func NewNes(rom *reader.NesRom) *Nes {
 }
 
 func (N *Nes) Frame(deadline float64) {
-	allowedCycles := deadline / 1000 / 1000 / 1000 * cpu.CpuClock
+	allowedCycles := deadline / 1000 / 1000 / 1000 * float64(common.CpuClock)
 	for allowedCycles > 0 {
 		var cycle uint = 0
 		if N.dma.IsDmaProcessing() {
@@ -72,6 +73,7 @@ func (N *Nes) Frame(deadline float64) {
 		allowedCycles -= float64(cpuCycles)
 		cycle += cpuCycles
 		renderingData := N.ppu.Run(cycle * 3)
+		N.apu.Run(cycle)
 		if renderingData != nil {
 			N.renderer.Render(renderingData)
 			break

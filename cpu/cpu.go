@@ -7,8 +7,6 @@ import (
 	"github.com/popsul/gones/interrupts"
 )
 
-const CpuClock = 1789772
-
 var instrNumber = 0
 
 type Cpu struct {
